@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.pyc
+
+# Banco de dados e saídas
+articles.db
+extracted_data.json
+
+# Configurações locais
+api/local.settings.json
