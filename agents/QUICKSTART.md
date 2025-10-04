@@ -2,6 +2,10 @@
 
 ## 1. Instalar Dependências
 
+Ativar o ambinete virtual
+
+source .venv/bin/activate
+
 ```powershell
 # Instalar pacote em modo editable
 pip install -e ".[dev]"
@@ -55,7 +59,7 @@ curl -X POST http://localhost:8000/chat -H "Content-Type: application/json" -d "
 
 ## Comandos Úteis
 
-```powershell
+```bash
 # Rodar testes
 pytest
 
@@ -67,6 +71,22 @@ ruff check packages/
 
 # Parar Redis
 docker compose down
+```
+
+## Parar Servidores Rodando
+
+Se precisar parar os servidores que estão rodando em background:
+
+```bash
+# Parar backend (porta 8000)
+pkill -f 'uvicorn packages.api.app.main:app'
+
+# Parar frontend (porta 5173)
+lsof -ti:5173 | xargs kill -9
+
+# Verificar se as portas estão livres
+lsof -i :8000
+lsof -i :5173
 ```
 
 ## Troubleshooting
