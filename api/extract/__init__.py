@@ -2,7 +2,7 @@ import logging
 import json
 import azure.functions as func
 from . import extractor
-from shared.sectionizer import sectionize_text
+from api.extract.sectionizer import sectionize_text
 
 # HTTP Trigger: GET /api/extract?url=...
 async def main(req: func.HttpRequest) -> func.HttpResponse:

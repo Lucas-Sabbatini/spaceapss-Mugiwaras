@@ -1,73 +1,39 @@
 import pandas as pd
 import asyncio
 import json
-import sqlite3
 import sys
+import uuid
 
 # Adiciona a pasta 'api' ao caminho do Python para que as importações funcionem
 sys.path.append('api')
 from extract.extractor import extract_url
-from shared.sectionizer import sectionize_text
+from extract.sectionizer import sectionize_text
+from vectorDatabase.vectorStore import VectorDBManager
 
 # --- Configuração de Caminhos ---
 CSV_FILE_PATH = 'api/shared/SB_publication_PMC.csv'
-DB_FILE_PATH = 'api/shared/articles.db'
-# --- MUDANÇA AQUI: Alterado o nome do ficheiro de backup para .jsonl ---
 OUTPUT_JSONL_PATH = 'api/shared/extracted_data.jsonl'
 
-# --- Funções do Banco de Dados (sem alteração) ---
-def setup_database():
-    """Cria a tabela no banco de dados SQLite se ela não existir."""
-    print(f"Verificando e configurando o banco de dados em '{DB_FILE_PATH}'...")
-    conn = sqlite3.connect(DB_FILE_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS articles (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            abstract TEXT,
-            content TEXT,
-            url TEXT UNIQUE NOT NULL
-        )
-    ''')
-    conn.commit()
-    conn.close()
+# --- Função Principal (Atualizada) ---
+async def main():
+    """
+    Função principal que orquestra a leitura do CSV, extração e armazenamento.
+    """
+    print("Inicializando o banco de dados vetorial...")
+    db = VectorDBManager()
     print("Banco de dados pronto.")
 
-def insert_article(title, abstract, content, url):
-    """Insere um artigo no banco de dados, evitando duplicatas pela URL."""
-    conn = sqlite3.connect(DB_FILE_PATH)
-    cursor = conn.cursor()
-    try:
-        cursor.execute(
-            "INSERT INTO articles (title, abstract, content, url) VALUES (?, ?, ?, ?)",
-            (title, abstract, content, url)
-        )
-        conn.commit()
-        return True
-    except sqlite3.IntegrityError:
-        return False
-    finally:
-        conn.close()
-
-# --- Função Principal ---
-async def main():
-    """Função principal que orquestra a leitura do CSV, extração e armazenamento."""
-    setup_database()
-    
-    # --- MUDANÇA AQUI: Abre o ficheiro de backup no início e apaga o conteúdo antigo ---
     with open(OUTPUT_JSONL_PATH, 'w', encoding='utf-8') as f_out:
-        pass # Apenas para limpar o ficheiro se ele já existir
+        pass 
 
     try:
         df = pd.read_csv(CSV_FILE_PATH)
     except FileNotFoundError:
         print(f"[ERRO] O arquivo CSV não foi encontrado em: '{CSV_FILE_PATH}'")
-        print("Verifique se o arquivo está na pasta 'api/shared/'.")
         return
         
     articles_added = 0
-    print(f"\nIniciando extração de {len(df)} artigos. Isso pode levar vários minutos...")
+    print(f"\nIniciando extração de {len(df)} artigos...")
 
     for index, row in df.iterrows():
         title = row.get('Title', 'Sem Título')
@@ -80,6 +46,15 @@ async def main():
             continue
             
         try:
+            # --- MUDANÇA PRINCIPAL AQUI ---
+            # Extrai o ID único do artigo a partir do final da URL.
+            # Exemplo: '.../articles/PMC4136787/' -> 'PMC4136787'
+            doc_id = url.strip('/').split('/')[-1]
+            if not doc_id:
+                # Se, por algum motivo, a extração falhar, usa a URL completa como fallback.
+                doc_id = url
+            # --- FIM DA MUDANÇA ---
+
             text_content, source_type = await extract_url(url)
             
             if text_content and len(text_content.strip()) > 100:
@@ -87,20 +62,28 @@ async def main():
                 abstract = sections.get("abstract", "")
                 content = sections.get("content", "")
                 
-                # --- MUDANÇA AQUI: Escreve no ficheiro de backup a cada iteração ---
                 raw_data = {"url": url, "sections": sections}
                 with open(OUTPUT_JSONL_PATH, 'a', encoding='utf-8') as f_out:
                     f_out.write(json.dumps(raw_data, ensure_ascii=False) + '\n')
                 
-                if content:
-                    success = insert_article(title, abstract, content, url)
-                    if success:
-                        print("  [SUCESSO] Artigo inserido no banco de dados.")
-                        articles_added += 1
-                    else:
-                        print("  [INFO] Artigo já existia no banco de dados. Pulando.")
+                if abstract and content:
+                    document_to_vectorize = abstract
+                    
+                    escaped_title = title.replace("'", "\\'")
+                    escaped_content = content.replace("'", "\\'").replace("\n", " ").replace('"', '\\"')
+                    
+                    metadata_string = f"'title': '{escaped_title}', 'url': '{url}', 'content': '{escaped_content}'"
+
+                    # Passa o ID extraído da URL para a função add_document
+                    db.add_document(
+                        abstract=document_to_vectorize, 
+                        document=metadata_string, 
+                        doc_id=doc_id
+                    )
+                    
+                    articles_added += 1
                 else:
-                    print("  [AVISO] Não foi possível separar o conteúdo principal do abstract. Pulando.")
+                    print("  [AVISO] Abstract ou conteúdo principal não encontrado. Pulando inserção no DB.")
             else:
                 print(f"  [AVISO] Extração resultou em conteúdo vazio ou muito curto. Pulando.")
             
@@ -110,8 +93,7 @@ async def main():
             print(f"  [ERRO FATAL] ao processar a URL {url}: {e}")
     
     print("\n--- Processo de extração finalizado! ---")
-    print(f"Total de artigos adicionados ao banco de dados: {articles_added}")
-    print(f"O banco de dados está salvo em: '{DB_FILE_PATH}'")
+    print(f"Total de documentos adicionados/atualizados no banco de dados: {articles_added}")
     print(f"Um backup com os dados brutos foi salvo em: '{OUTPUT_JSONL_PATH}'")
 
 if __name__ == "__main__":

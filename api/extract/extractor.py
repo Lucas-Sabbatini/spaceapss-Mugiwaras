@@ -1,6 +1,6 @@
 import os
 import asyncio
-from shared.fetchers import fetch_url, sniff_is_pdf, extract_pdf_text, extract_html_text
+from api.extract.fetchers import fetch_url, sniff_is_pdf, extract_pdf_text, extract_html_text
 
 # Função centralizada para extrair texto de uma URL (seja HTML ou PDF)
 async def extract_url(url: str):
