@@ -8,3 +8,6 @@ extracted_data.json
 
 # Configurações locais
 api/local.settings.json
+
+# Banco de dados Chroma
+chroma_db/
