@@ -76,32 +76,15 @@ class ChatResponse(BaseModel):
     """Resposta do agente."""
 
     answer: str = Field(..., description="Resposta gerada pelo agente")
-    sources: List[SourceRef] = Field(..., description="Fontes utilizadas")
-    article: Article = Field(..., description="Artigo mais relevante completo")
+    sources: List[SourceRef] = Field(default_factory=list, description="Fontes utilizadas (opcional)")
+    article: Optional[Article] = Field(None, description="Artigo mais relevante completo (opcional)")
 
     class Config:
         json_schema_extra = {
             "example": {
                 "answer": "Estudos mostram que a microgravidade afeta a diferenciação de células-tronco...",
-                "sources": [
-                    {
-                        "id": "art-001",
-                        "title": "Effects of Microgravity on Stem Cells",
-                        "year": 2023,
-                        "doi": "10.1234/example",
-                        "url": "https://example.com/article",
-                        "score": 0.89,
-                    }
-                ],
-                "article": {
-                    "id": "art-001",
-                    "title": "Effects of Microgravity on Stem Cells",
-                    "authors": ["Silva, J.", "Santos, M."],
-                    "year": 2023,
-                    "doi": "10.1234/example",
-                    "url": "https://example.com/article",
-                    "abstract": "Este estudo investiga...",
-                },
+                "sources": [],
+                "article": None,
             }
         }
 

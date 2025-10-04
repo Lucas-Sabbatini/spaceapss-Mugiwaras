@@ -1,36 +1,23 @@
 """Prompts para síntese de respostas."""
 
-from typing import List, Dict, Any
+from typing import List
 
 
-def build_synthesis_prompt(question: str, context_docs: List[Dict[str, Any]]) -> str:
+def build_synthesis_prompt(question: str, context_docs: List[str]) -> str:
     """
     Constrói prompt de síntese seguro e conciso.
     
     Args:
         question: Pergunta do usuário
-        context_docs: Lista de documentos relevantes
+        context_docs: Lista de strings relacionadas à pergunta
         
     Returns:
         Prompt formatado para o LLM
     """
-    # Montar contexto dos documentos
+    # Montar contexto dos documentos (apenas strings)
     context_parts = []
-    for idx, doc in enumerate(context_docs[:3], 1):  # Máximo 3 docs no contexto
-        title = doc.get("title", "")
-        year = doc.get("year", "")
-        doi = doc.get("doi", "")
-        abstract = doc.get("abstract", "")[:500]  # Limitar abstract
-
-        context_parts.append(
-            f"""
-[Documento {idx}]
-Título: {title}
-Ano: {year}
-DOI: {doi if doi else "N/A"}
-Resumo: {abstract}
-"""
-        )
+    for idx, doc_text in enumerate(context_docs[:5], 1):  # Máximo 5 docs no contexto
+        context_parts.append(f"[Documento {idx}]\n{doc_text}\n")
 
     context_text = "\n".join(context_parts)
 
@@ -43,7 +30,7 @@ REGRAS IMPORTANTES:
 1. Responda em português brasileiro (PT-BR)
 2. Limite sua resposta a 6-8 linhas
 3. Seja direto ao ponto, sem introduções desnecessárias
-4. Cite as fontes usando: (Título, Ano) ou (DOI)
+4. Cite as fontes mencionadas nos documentos
 5. NÃO invente informações que não estão nos documentos
 6. Se não houver informação suficiente, diga claramente: "Não encontrei informações suficientes nos artigos disponíveis"
 7. Foque nos achados principais e conclusões
