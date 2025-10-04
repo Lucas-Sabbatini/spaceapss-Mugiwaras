@@ -9,20 +9,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Configurações carregadas de variáveis de ambiente."""
 
-    # LLM Provider
-    provider: Literal["openai", "azure"] = "openai"
-
-    # OpenAI
-    openai_api_key: str = ""
-    openai_embed_model: str = "text-embedding-3-small"
-    openai_chat_model: str = "gpt-4o-mini"
-
-    # Azure OpenAI
-    azure_openai_endpoint: str = ""
-    azure_openai_api_key: str = ""
-    azure_openai_embed_deployment: str = ""
-    azure_openai_chat_deployment: str = ""
-    azure_openai_api_version: str = "2024-06-01"
+    # Google Gemini
+    google_api_key: str = ""
+    google_embed_model: str = "models/text-embedding-004"
+    google_chat_model: str = "gemini-2.0-flash"
 
     # Redis
     redis_url: str = "redis://localhost:6379"

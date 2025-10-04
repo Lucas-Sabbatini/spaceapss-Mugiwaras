@@ -1,8 +1,8 @@
-"""Wrapper para serviço de embeddings (OpenAI/Azure OpenAI)."""
+"""Wrapper para serviço de embeddings (Google Gemini)."""
 
 from typing import List
 
-from openai import AzureOpenAI, OpenAI
+import google.generativeai as genai
 
 from packages.api.app.config import get_settings
 from packages.api.app.services.logger import get_logger, log_error, log_info
@@ -15,73 +15,64 @@ class EmbeddingsService:
     """Serviço de geração de embeddings."""
 
     def __init__(self):
-        """Inicializa cliente OpenAI ou Azure OpenAI."""
-        self.provider = settings.provider
-        self.client = None
-
-        if self.provider == "openai":
-            self.client = OpenAI(api_key=settings.openai_api_key)
-            self.model = settings.openai_embed_model
-            log_info(logger, "EmbeddingsService inicializado", provider="openai")
-
-        elif self.provider == "azure":
-            self.client = AzureOpenAI(
-                api_key=settings.azure_openai_api_key,
-                api_version=settings.azure_openai_api_version,
-                azure_endpoint=settings.azure_openai_endpoint,
-            )
-            self.model = settings.azure_openai_embed_deployment
-            log_info(logger, "EmbeddingsService inicializado", provider="azure")
+        """Inicializa cliente Google Gemini."""
+        genai.configure(api_key=settings.google_api_key)
+        self.model = settings.google_embed_model
+        log_info(logger, "EmbeddingsService inicializado", provider="google_gemini", model=self.model)
 
     def get_embedding(self, text: str) -> List[float]:
         """Gera embedding para um texto."""
-        if not self.client:
-            raise ValueError("Cliente de embeddings não inicializado")
-
         try:
-            # Limitar texto a ~8000 tokens (aproximado)
-            text = text[:32000]
+            # Limitar texto (Gemini aceita ~10k tokens)
+            text = text[:40000]
 
-            # Chamar API
-            response = self.client.embeddings.create(input=[text], model=self.model)
+            # Chamar API do Gemini
+            result = genai.embed_content(
+                model=self.model,
+                content=text,
+                task_type="retrieval_document"
+            )
 
-            embedding = response.data[0].embedding
+            embedding = result['embedding']
             log_info(
                 logger,
                 "Embedding gerado",
-                provider=self.provider,
+                provider="google_gemini",
                 dim=len(embedding),
                 text_len=len(text),
             )
             return embedding
 
         except Exception as e:
-            log_error(logger, "Erro ao gerar embedding", e, provider=self.provider)
+            log_error(logger, "Erro ao gerar embedding", e, provider="google_gemini")
             raise
 
     def get_embeddings_batch(self, texts: List[str]) -> List[List[float]]:
         """Gera embeddings para múltiplos textos (batch)."""
-        if not self.client:
-            raise ValueError("Cliente de embeddings não inicializado")
-
         try:
             # Limitar textos
-            texts = [text[:32000] for text in texts]
+            texts = [text[:40000] for text in texts]
 
-            # Chamar API
-            response = self.client.embeddings.create(input=texts, model=self.model)
+            # Gemini suporta batch com lista de textos
+            embeddings = []
+            for text in texts:
+                result = genai.embed_content(
+                    model=self.model,
+                    content=text,
+                    task_type="retrieval_document"
+                )
+                embeddings.append(result['embedding'])
 
-            embeddings = [item.embedding for item in response.data]
             log_info(
                 logger,
                 "Embeddings batch gerados",
-                provider=self.provider,
+                provider="google_gemini",
                 count=len(embeddings),
             )
             return embeddings
 
         except Exception as e:
-            log_error(logger, "Erro ao gerar embeddings batch", e, provider=self.provider)
+            log_error(logger, "Erro ao gerar embeddings batch", e, provider="google_gemini")
             raise
 
 

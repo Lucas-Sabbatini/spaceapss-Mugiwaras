@@ -34,5 +34,5 @@ def sample_chat_request():
 
 @pytest.fixture
 def mock_embedding():
-    """Fixture com embedding mock (1536 dims)."""
-    return [0.1] * 1536
+    """Fixture com embedding mock (768 dims - Google Gemini)."""
+    return [0.1] * 768

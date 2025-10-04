@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 import redis
 from redis.commands.json.path import Path
 from redis.commands.search.field import NumericField, TagField, TextField, VectorField
-from redis.commands.search.indexDefinition import IndexDefinition, IndexType
+from redis.commands.search.index_definition import IndexDefinition, IndexType
 from redis.commands.search.query import Query
 
 from packages.api.app.config import get_settings
@@ -81,7 +81,7 @@ class RedisClient:
                     "FLAT",
                     {
                         "TYPE": "FLOAT32",
-                        "DIM": 1536,
+                        "DIM": 768,  # Google Gemini text-embedding-004
                         "DISTANCE_METRIC": "COSINE",
                     },
                     as_name="embedding",
@@ -155,8 +155,10 @@ class RedisClient:
                 .dialect(2)
             )
 
-            # Executar busca
-            params = {"vec": bytes(sum(([float(x)] for x in query_embedding), []))}
+            # Executar busca - converter embedding para bytes (array de float32)
+            import struct
+            vec_bytes = struct.pack(f"{len(query_embedding)}f", *query_embedding)
+            params = {"vec": vec_bytes}
             results = self.client.ft(self.index_name).search(query, params)
 
             # Processar resultados

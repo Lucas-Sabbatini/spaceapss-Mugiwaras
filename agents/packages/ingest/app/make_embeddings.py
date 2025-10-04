@@ -30,7 +30,7 @@ def generate_embeddings():
     except Exception as e:
         log_error(logger, "Erro ao inicializar serviço de embeddings", e)
         print(f"❌ Erro ao inicializar embeddings: {str(e)}")
-        print("💡 Verifique se OPENAI_API_KEY ou AZURE_OPENAI_API_KEY estão configurados no .env")
+        print("💡 Verifique se GOOGLE_API_KEY está configurado no .env")
         sys.exit(1)
 
     # Listar todos os artigos
