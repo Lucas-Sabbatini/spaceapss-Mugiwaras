@@ -2,6 +2,7 @@ import logging
 import json
 import azure.functions as func
 from . import extractor
+from api.extract.sectionizer import sectionize_text
 
 # HTTP Trigger: GET /api/extract?url=...
 async def main(req: func.HttpRequest) -> func.HttpResponse:
@@ -13,7 +14,21 @@ async def main(req: func.HttpRequest) -> func.HttpResponse:
                 status_code=400,
                 mimetype="application/json",
             )
-        result = await extractor.extract_url(url)
+        
+        # 1. Extrai o texto usando a função centralizada
+        text, source_type = await extractor.extract_url(url)
+        
+        # 2. Separa o texto em seções
+        sections = sectionize_text(text)
+        
+        # 3. Monta o resultado JSON final para a API
+        result = {
+            "url": url,
+            "source_type": source_type,
+            "length_chars": len(text),
+            "sections": sections,
+        }
+
         return func.HttpResponse(
             json.dumps(result, ensure_ascii=False),
             status_code=200,
