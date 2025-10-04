@@ -6,7 +6,10 @@ async function extract() {
   if (!url) { status.textContent = 'Informe uma URL.'; return; }
   status.textContent = 'Extraindo...';
   try {
-    const resp = await fetch(`/api/extract?url=${encodeURIComponent(url)}`);
+    // Detecta se está rodando em Codespaces e ajusta a URL do backend
+    // URL fixa do backend Azure Functions no Codespace fornecido
+    const backendUrl = 'https://humble-halibut-rvx7r4q7g6357j4-7071.app.github.dev';
+    const resp = await fetch(`${backendUrl}/api/extract?url=${encodeURIComponent(url)}`);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
     status.textContent = 'OK';
