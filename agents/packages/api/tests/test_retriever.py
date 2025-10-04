@@ -20,8 +20,8 @@ def mock_redis_client():
 def mock_embeddings_service():
     """Mock do EmbeddingsService."""
     mock = MagicMock()
-    mock.get_embedding.return_value = [0.1] * 1536
-    mock.get_embeddings_batch.return_value = [[0.1] * 1536, [0.2] * 1536]
+    mock.get_embedding.return_value = [0.1] * 768
+    mock.get_embeddings_batch.return_value = [[0.1] * 768, [0.2] * 768]
     return mock
 
 
@@ -35,7 +35,7 @@ def sample_articles():
             "abstract": "This study investigates microgravity effects on stem cells.",
             "year": 2023,
             "doi": "10.1234/example1",
-            "embedding": [0.1] * 1536,
+            "embedding": [0.1] * 768,
         },
         {
             "id": "art-002",
@@ -43,7 +43,7 @@ def sample_articles():
             "abstract": "Comprehensive review of radiation protection strategies.",
             "year": 2024,
             "doi": "10.1234/example2",
-            "embedding": [0.2] * 1536,
+            "embedding": [0.2] * 768,
         },
         {
             "id": "art-003",
@@ -51,7 +51,7 @@ def sample_articles():
             "abstract": "Study of cardiovascular changes during long missions.",
             "year": 2023,
             "doi": "10.1234/example3",
-            "embedding": [0.15] * 1536,
+            "embedding": [0.15] * 768,
         },
     ]
 
@@ -100,7 +100,7 @@ def test_retrieve_redis_mode():
             mock_get_redis.return_value = mock_redis
 
             mock_emb = MagicMock()
-            mock_emb.get_embedding.return_value = [0.1] * 1536
+            mock_emb.get_embedding.return_value = [0.1] * 768
             mock_get_emb.return_value = mock_emb
 
             retriever = Retriever()
@@ -128,7 +128,7 @@ def test_retrieve_returns_ordered_by_score():
             mock_get_redis.return_value = mock_redis
 
             mock_emb = MagicMock()
-            mock_emb.get_embedding.return_value = [0.1] * 1536
+            mock_emb.get_embedding.return_value = [0.1] * 768
             mock_get_emb.return_value = mock_emb
 
             retriever = Retriever()
@@ -154,7 +154,7 @@ def test_retrieve_respects_top_k():
             mock_get_redis.return_value = mock_redis
 
             mock_emb = MagicMock()
-            mock_emb.get_embedding.return_value = [0.1] * 1536
+            mock_emb.get_embedding.return_value = [0.1] * 768
             mock_get_emb.return_value = mock_emb
 
             retriever = Retriever()
@@ -175,7 +175,7 @@ def test_retrieve_handles_empty_results():
             mock_get_redis.return_value = mock_redis
 
             mock_emb = MagicMock()
-            mock_emb.get_embedding.return_value = [0.1] * 1536
+            mock_emb.get_embedding.return_value = [0.1] * 768
             mock_get_emb.return_value = mock_emb
 
             retriever = Retriever()
@@ -195,7 +195,7 @@ def test_retrieve_handles_exceptions():
             mock_get_redis.return_value = mock_redis
 
             mock_emb = MagicMock()
-            mock_emb.get_embedding.return_value = [0.1] * 1536
+            mock_emb.get_embedding.return_value = [0.1] * 768
             mock_get_emb.return_value = mock_emb
 
             retriever = Retriever()

@@ -2,7 +2,7 @@
 
 from typing import List
 
-from openai import AzureOpenAI, OpenAI
+import google.generativeai as genai
 
 from packages.api.app.agent.prompts import build_fallback_prompt, build_synthesis_prompt
 from packages.api.app.agent.retriever import get_retriever
@@ -21,19 +21,11 @@ class AgentPipeline:
         """Inicializa pipeline."""
         self.retriever = get_retriever()
 
-        # Cliente LLM
-        if settings.provider == "openai":
-            self.llm_client = OpenAI(api_key=settings.openai_api_key)
-            self.chat_model = settings.openai_chat_model
-        else:
-            self.llm_client = AzureOpenAI(
-                api_key=settings.azure_openai_api_key,
-                api_version=settings.azure_openai_api_version,
-                azure_endpoint=settings.azure_openai_endpoint,
-            )
-            self.chat_model = settings.azure_openai_chat_deployment
+        # Cliente LLM Google Gemini
+        genai.configure(api_key=settings.google_api_key)
+        self.chat_model = settings.google_chat_model
 
-        log_info(logger, "AgentPipeline inicializado", provider=settings.provider)
+        log_info(logger, "AgentPipeline inicializado", provider="google_gemini")
 
     def answer(self, question: str, top_k: int = 5) -> ChatResponse:
         """
@@ -85,15 +77,17 @@ class AgentPipeline:
             # Construir prompt
             prompt = build_synthesis_prompt(question, docs)
 
-            # Chamar LLM
-            response = self.llm_client.chat.completions.create(
-                model=self.chat_model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.3,
-                max_tokens=500,
+            # Chamar LLM do Gemini
+            model = genai.GenerativeModel(self.chat_model)
+            response = model.generate_content(
+                prompt,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.3,
+                    max_output_tokens=500,
+                )
             )
 
-            answer = response.choices[0].message.content.strip()
+            answer = response.text.strip()
             log_info(logger, "Síntese gerada", answer_len=len(answer))
 
             return answer

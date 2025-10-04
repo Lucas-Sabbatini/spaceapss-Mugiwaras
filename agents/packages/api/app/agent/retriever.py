@@ -15,10 +15,8 @@ class Retriever:
     def __init__(self):
         """Inicializa retriever."""
         try:
-            # Caminho para o chroma_db relativo ao diretório do projeto
-            db_path = str(Path(__file__).parent.parent.parent.parent.parent.parent / "chroma_db")
-            self.db_manager = VectorDBManager(db_path=db_path)
-            log_info(logger, "Retriever inicializado com VectorDBManager", db_path=db_path)
+            self.db_manager = VectorDBManager()
+            log_info(logger, "Retriever inicializado com VectorDBManager")
         except Exception as e:
             log_error(logger, "Erro ao inicializar VectorDBManager", e)
             self.db_manager = None
