@@ -15,10 +15,3 @@ api/local.settings.json
 
 # Banco de dados Chroma
 chroma_db/
-
-spaceapss_agents.egg-info/
-agents/spaceapss_agents.egg-info/PKG-INFO
-agents/spaceapss_agents.egg-info/SOURCES.txt
-agents/shared/extracted_data.jsonl
-agents/spaceapss_agents.egg-info/PKG-INFO
-agents/spaceapss_agents.egg-info/SOURCES.txt
