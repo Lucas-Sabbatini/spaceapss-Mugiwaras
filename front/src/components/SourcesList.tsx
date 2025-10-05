@@ -8,7 +8,7 @@ interface SourcesListProps {
 export function SourcesList({ sources, onSourceClick }: SourcesListProps) {
   return (
     <div className="space-y-1">
-      <p className="text-xs text-gray-600 font-medium mb-2">📚 Fontes:</p>
+      <p className="text-xs text-gray-600 font-medium mb-2">📚 Sources:</p>
       <div className="flex flex-wrap gap-2">
         {sources.map((source) => (
           <button

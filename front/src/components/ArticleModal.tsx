@@ -25,13 +25,13 @@ export function ArticleModal({ article, isOpen, onClose }: ArticleModalProps) {
   const copyCitation = () => {
     const citation = `${article.authors.join(', ')} (${article.year}). ${article.title}. ${article.doi ? `DOI: ${article.doi}` : ''}`;
     navigator.clipboard.writeText(citation);
-    alert('Citação copiada!');
+    alert('Citation copied!');
   };
 
   const copyDoi = () => {
     if (article.doi) {
       navigator.clipboard.writeText(article.doi);
-      alert('DOI copiado!');
+      alert('DOI copied!');
     }
   };
 
@@ -86,14 +86,14 @@ export function ArticleModal({ article, isOpen, onClose }: ArticleModalProps) {
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {/* Abstract */}
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Resumo</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Abstract</h3>
             <p className="text-gray-700 leading-relaxed">{article.abstract}</p>
           </div>
 
           {/* Sections */}
           {article.sections && article.sections.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Seções</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Sections</h3>
               <div className="space-y-2">
                 {article.sections.map((section, index) => (
                   <div key={index} className="border border-gray-200 rounded-lg">
@@ -122,7 +122,7 @@ export function ArticleModal({ article, isOpen, onClose }: ArticleModalProps) {
           {/* References */}
           {article.references && article.references.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Referências</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">References</h3>
               <ul className="space-y-2">
                 {article.references.map((ref, index) => (
                   <li key={index} className="text-sm text-gray-700 pl-4">
@@ -136,11 +136,11 @@ export function ArticleModal({ article, isOpen, onClose }: ArticleModalProps) {
           {/* Metadata */}
           {article.metadata && Object.keys(article.metadata).length > 0 && (
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Metadados</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Metadata</h3>
               <div className="bg-gray-50 rounded-lg p-4">
                 {article.metadata.keywords && (
                   <div className="mb-2">
-                    <span className="font-medium text-gray-700">Palavras-chave: </span>
+                    <span className="font-medium text-gray-700">Keywords: </span>
                     <span className="text-gray-600">
                       {Array.isArray(article.metadata.keywords)
                         ? article.metadata.keywords.join(', ')
@@ -150,13 +150,13 @@ export function ArticleModal({ article, isOpen, onClose }: ArticleModalProps) {
                 )}
                 {article.metadata.journal && (
                   <div className="mb-2">
-                    <span className="font-medium text-gray-700">Jornal: </span>
+                    <span className="font-medium text-gray-700">Journal: </span>
                     <span className="text-gray-600">{article.metadata.journal}</span>
                   </div>
                 )}
                 {article.metadata.impact_factor && (
                   <div>
-                    <span className="font-medium text-gray-700">Fator de Impacto: </span>
+                    <span className="font-medium text-gray-700">Impact Factor: </span>
                     <span className="text-gray-600">{article.metadata.impact_factor}</span>
                   </div>
                 )}
@@ -168,11 +168,11 @@ export function ArticleModal({ article, isOpen, onClose }: ArticleModalProps) {
         {/* Footer */}
         <div className="px-6 py-4 border-t border-gray-200 flex gap-3">
           <button onClick={copyCitation} className="btn-secondary">
-            📋 Copiar Citação
+            📋 Copy Citation
           </button>
           {article.doi && (
             <button onClick={copyDoi} className="btn-secondary">
-              📋 Copiar DOI
+              📋 Copy DOI
             </button>
           )}
           {article.url && (
@@ -182,7 +182,7 @@ export function ArticleModal({ article, isOpen, onClose }: ArticleModalProps) {
               rel="noopener noreferrer"
               className="btn-secondary"
             >
-              🔗 Abrir URL
+              🔗 Open URL
             </a>
           )}
         </div>

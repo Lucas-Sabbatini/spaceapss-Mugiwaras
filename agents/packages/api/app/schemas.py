@@ -1,5 +1,6 @@
 """Modelos Pydantic para validação de dados."""
 
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, HttpUrl
@@ -10,6 +11,54 @@ class Section(BaseModel):
 
     heading: str = Field(..., description="Título da seção")
     content: str = Field(..., description="Conteúdo da seção")
+
+
+class ArticleDetail(BaseModel):
+    """Modelo completo de um artigo enriquecido do MongoDB."""
+
+    experiment_id: str = Field(..., description="ID único do experimento (ex: PMC9267413)")
+    doi: Optional[str] = Field(None, description="DOI do artigo")
+    title: Optional[str] = Field(None, description="Título do artigo")
+    abstract: Optional[str] = Field(None, description="Resumo original")
+    summary_en: Optional[str] = Field(None, description="Resumo em inglês")
+    year: Optional[int] = Field(None, description="Ano de publicação")
+    authors: List[str] = Field(default_factory=list, description="Lista de autores")
+    institutions: List[str] = Field(default_factory=list, description="Instituições")
+    funding: List[str] = Field(default_factory=list, description="Fontes de financiamento")
+    objectives: List[str] = Field(default_factory=list, description="Objetivos do estudo")
+    hypotheses: List[str] = Field(default_factory=list, description="Hipóteses testadas")
+    organisms: List[str] = Field(default_factory=list, description="Organismos estudados")
+    conditions: List[str] = Field(default_factory=list, description="Condições experimentais")
+    methods: List[str] = Field(default_factory=list, description="Métodos utilizados")
+    parameters_measured: List[str] = Field(default_factory=list, description="Parâmetros medidos")
+    results_summary: Optional[str] = Field(None, description="Resumo dos resultados")
+    significant_findings: List[str] = Field(default_factory=list, description="Descobertas significativas")
+    implications: List[str] = Field(default_factory=list, description="Implicações")
+    limitations: List[str] = Field(default_factory=list, description="Limitações do estudo")
+    future_directions: List[str] = Field(default_factory=list, description="Direções futuras")
+    duration: Optional[str] = Field(None, description="Duração do experimento")
+    sample_size: Optional[int] = Field(None, description="Tamanho da amostra")
+    conditions_control: List[str] = Field(default_factory=list, description="Grupos controle")
+    related_projects: List[str] = Field(default_factory=list, description="Projetos relacionados")
+    citations: Optional[int] = Field(None, description="Número de citações")
+    full_text: Optional[str] = Field(None, description="Texto completo")
+    mesh_terms: List[str] = Field(default_factory=list, description="Termos MeSH")
+    journal: Optional[str] = Field(None, description="Nome do journal")
+    pmid: Optional[str] = Field(None, description="PubMed ID")
+    created_at: Optional[datetime] = Field(None, description="Data de criação")
+    updated_at: Optional[datetime] = Field(None, description="Data de atualização")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "experiment_id": "PMC9267413",
+                "title": "Effects of Microgravity on Cell Behavior",
+                "authors": ["John Doe", "Jane Smith"],
+                "year": 2022,
+                "abstract": "This study investigates...",
+                "summary_en": "This study investigates the effects of microgravity...",
+            }
+        }
 
 
 class Article(BaseModel):
