@@ -19,6 +19,11 @@ class Settings(BaseSettings):
     redis_username: str = ""
     redis_password: str = ""
 
+    # MongoDB
+    mongodb_uri: str = "mongodb://localhost:27017/"
+    mongodb_database: str = "spaceapss"
+    mongodb_collection: str = "experiments"
+
     # API
     api_port: int = 8000
     env: Literal["dev", "prod"] = "dev"

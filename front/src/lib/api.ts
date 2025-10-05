@@ -1,4 +1,4 @@
-import type { ChatRequest, ChatResponse } from './types';
+import type { ChatRequest, ChatResponse, ArticleDetail } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -23,6 +23,34 @@ export async function sendChatMessage(request: ChatRequest): Promise<ChatRespons
       throw new ApiError(
         response.status,
         `Falha ao consultar o agente: ${response.statusText}`
+      );
+    }
+
+    return await response.json();
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new Error('Erro de conexão com o servidor. Verifique se o backend está rodando.');
+  }
+}
+
+export async function getArticleDetail(experimentId: string): Promise<ArticleDetail> {
+  try {
+    const response = await fetch(`${API_URL}/article/${experimentId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new ApiError(404, `Article ${experimentId} not found in the database`);
+      }
+      throw new ApiError(
+        response.status,
+        `Failed to fetch article: ${response.statusText}`
       );
     }
 

@@ -29,7 +29,7 @@ export function MessageBubble({ message, onSourceClick }: MessageBubbleProps) {
         )}
 
         <div className="mt-1 text-xs text-gray-500 px-1">
-          {message.timestamp.toLocaleTimeString('pt-BR', {
+          {message.timestamp.toLocaleTimeString('en-US', {
             hour: '2-digit',
             minute: '2-digit',
           })}
