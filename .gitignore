@@ -2,6 +2,10 @@
 __pycache__/
 *.pyc
 
+# Environment
+.venv/
+*.env
+
 # Banco de dados e saídas
 articles.db
 extracted_data.json
