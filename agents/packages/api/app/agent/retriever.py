@@ -1,29 +1,29 @@
-"""Retriever usando VectorDBManager."""
+"""Retriever usando CosmosDataManager."""
 
 from pathlib import Path
 from typing import List, Dict, Any
 
-from packages.api.app.services.vector_db import VectorDBManager
+from packages.api.app.services.cosmos_data import CosmosDataManager
 from packages.api.app.services.logger import get_logger, log_error, log_info
 
 logger = get_logger(__name__)
 
 
 class Retriever:
-    """Retriever simples usando VectorDBManager."""
+    """Retriever simples usando CosmosDataManager."""
 
     def __init__(self):
         """Inicializa retriever."""
         try:
-            self.db_manager = VectorDBManager()
-            log_info(logger, "Retriever inicializado com VectorDBManager")
+            self.db_manager = CosmosDataManager()
+            log_info(logger, "Retriever inicializado com CosmosDataManager")
         except Exception as e:
-            log_error(logger, "Erro ao inicializar VectorDBManager", e)
+            log_error(logger, "Erro ao inicializar CosmosDataManager", e)
             self.db_manager = None
 
     def retrieve(self, question: str, top_k: int = 5) -> List[str]:
         """
-        Recupera documentos relevantes usando VectorDBManager.
+        Recupera documentos relevantes usando CosmosDataManager.
         
         Args:
             question: Pergunta do usuário
@@ -33,11 +33,10 @@ class Retriever:
             Lista de strings relacionadas à pergunta
         """
         if self.db_manager is None:
-            log_error(logger, "VectorDBManager não inicializado", Exception())
+            log_error(logger, "CosmosDataManager não inicializado", Exception())
             return []
 
         try:
-            # Usar o método query do VectorDBManager
             results = self.db_manager.query(query_text=question, n_results=top_k)
             with open("retrieved_results.txt", "w", encoding="utf-8") as f:
                 for item in results:
@@ -67,11 +66,10 @@ class Retriever:
             Lista de dicionários com dados estruturados dos documentos
         """
         if self.db_manager is None:
-            log_error(logger, "VectorDBManager não inicializado", Exception())
+            log_error(logger, "CosmosDataManager não inicializado", Exception())
             return []
 
         try:
-            # Usar o novo método query_with_metadata
             results = self.db_manager.query_with_metadata(query_text=question, n_results=top_k)
             
             log_info(

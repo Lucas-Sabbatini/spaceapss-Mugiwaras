@@ -4,6 +4,8 @@ lxml[html_clean]==5.3.0
 readability-lxml==0.8.1
 pdfminer.six==20240706
 azure-functions==1.21.3
+azure-cosmos
+python-dotenv
 pandas
 chromadb
 # Dependências adicionais para o Pipeline de Enriquecimento

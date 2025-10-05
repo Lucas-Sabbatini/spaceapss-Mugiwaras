@@ -18,7 +18,7 @@ async def lifespan(app: FastAPI):
     """Lifecycle events da aplicação."""
     # Startup
     log_info(logger, "Iniciando aplicação SpaceAPSS Agents", env=settings.env)
-    log_info(logger, "Sistema usando ChromaDB para retrieval")
+    log_info(logger, "Sistema usando Azure Cosmos DB (SQL API)")
 
     yield
 

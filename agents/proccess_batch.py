@@ -1,11 +1,14 @@
 import pandas as pd
 import asyncio
 import json
+from dotenv import load_dotenv
 
+# Carregar variáveis de ambiente do .env
+load_dotenv()
 
 from extract.extractor import extract_url
 from extract.sectionizer import sectionize_text
-from packages.api.app.services.vector_db import VectorDBManager
+from packages.api.app.services.cosmos_data import CosmosDataManager
 
 # --- Configuração de Caminhos ---
 CSV_FILE_PATH = 'shared/SB_publication_PMC.csv'
@@ -16,9 +19,9 @@ async def main():
     """
     Função principal que orquestra a leitura do CSV, extração e armazenamento.
     """
-    print("Inicializando o banco de dados vetorial...")
-    db = VectorDBManager()
-    print("Banco de dados pronto.")
+    print("Inicializando o Azure Cosmos DB...")
+    db = CosmosDataManager()
+    print("Cosmos DB pronto.")
 
     with open(OUTPUT_JSONL_PATH, 'w', encoding='utf-8') as f_out:
         pass 
