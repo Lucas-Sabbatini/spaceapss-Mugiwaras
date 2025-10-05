@@ -13,5 +13,7 @@ extracted_data.json
 # Configurações locais
 api/local.settings.json
 
+spaceapss_agents.egg-info
+
 # Banco de dados Chroma
 chroma_db/

@@ -30,6 +30,41 @@ export interface Article {
   metadata?: Record<string, any>;
 }
 
+// Interface completa do artigo enriquecido (retornado pelo endpoint /article/{experiment_id})
+export interface ArticleDetail {
+  experiment_id: string;
+  doi?: string;
+  title?: string;
+  abstract?: string;
+  summary_en?: string;
+  year?: number;
+  authors: string[];
+  institutions: string[];
+  funding: string[];
+  objectives: string[];
+  hypotheses: string[];
+  organisms: string[];
+  conditions: string[];
+  methods: string[];
+  parameters_measured: string[];
+  results_summary?: string;
+  significant_findings: string[];
+  implications: string[];
+  limitations: string[];
+  future_directions: string[];
+  duration?: string;
+  sample_size?: number;
+  conditions_control: string[];
+  related_projects: string[];
+  citations?: number;
+  full_text?: string;
+  mesh_terms: string[];
+  journal?: string;
+  pmid?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface ChatResponse {
   answer: string;
   sources: Source[];

@@ -7,3 +7,20 @@ azure-functions==1.21.3
 azure-cosmos
 python-dotenv
 pandas
+chromadb
+# Dependências adicionais para o Pipeline de Enriquecimento
+
+# HTTP assíncrono para APIs
+aiohttp>=3.9.0
+
+# MongoDB
+pymongo>=4.6.0
+motor>=3.3.0  # Driver assíncrono (opcional)
+
+# Já incluídas no projeto principal:
+# google-generativeai>=0.3.0
+# pandas>=1.26.0
+# python-dotenv>=1.0.0
+
+# Para desenvolvimento/testes
+pytest-asyncio>=0.23.0
