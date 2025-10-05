@@ -1,1 +1,0 @@
-"""Inicialização dos testes."""
