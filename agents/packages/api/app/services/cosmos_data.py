@@ -4,6 +4,7 @@ import os
 import re
 from typing import List, Dict, Any
 from azure.cosmos import CosmosClient, PartitionKey, exceptions
+import google.generativeai as genai
 
 
 class CosmosDataManager:
@@ -124,7 +125,86 @@ class CosmosDataManager:
 
     def query_with_metadata(self, query_text: str, n_results: int = 2) -> List[Dict[str, Any]]:
         """
-        Busca documentos por palavras-chave retornando metadados estruturados.
+        Busca documentos usando vector search se disponível, senão fallback para keyword search.
+        """
+        # Tentar busca vetorial primeiro
+        try:
+            return self.vector_search(query_text, n_results)
+        except Exception as e:
+            print(f"⚠️  Vector search falhou: {e}. Usando keyword search...")
+            return self._keyword_search(query_text, n_results)
+
+    def vector_search(self, query_text: str, n_results: int = 5) -> List[Dict[str, Any]]:
+        """
+        Busca vetorial usando embeddings do Google Gemini.
+        
+        Args:
+            query_text: Texto da query
+            n_results: Número de resultados
+            
+        Returns:
+            Lista de documentos ordenados por similaridade
+        """
+        # Configurar Gemini
+        api_key = os.getenv('GOOGLE_API_KEY')
+        if not api_key:
+            raise ValueError("GOOGLE_API_KEY não configurada")
+        
+        genai.configure(api_key=api_key)
+        
+        # Gerar embedding da query
+        model = os.getenv('GOOGLE_EMBED_MODEL', 'models/text-embedding-004')
+        result = genai.embed_content(
+            model=model,
+            content=query_text,
+            task_type="retrieval_query"
+        )
+        query_embedding = result['embedding']
+        
+        # Query vetorial no Cosmos DB
+        query_sql = """
+        SELECT TOP @topK
+            c.id,
+            c.doc_id,
+            c.title,
+            c.abstract,
+            c.content,
+            c.url,
+            c.keywords,
+            VectorDistance(c.embedding, @queryVector) AS similarity
+        FROM c
+        WHERE IS_DEFINED(c.embedding)
+        ORDER BY VectorDistance(c.embedding, @queryVector)
+        """
+        
+        items = list(self.container.query_items(
+            query=query_sql,
+            parameters=[
+                {"name": "@topK", "value": n_results},
+                {"name": "@queryVector", "value": query_embedding}
+            ],
+            enable_cross_partition_query=True
+        ))
+        
+        # Formatar resultados
+        results = []
+        for item in items:
+            results.append({
+                'id': item.get('doc_id', item.get('id', '')),
+                'document': item.get('abstract', ''),
+                'title': item.get('title', 'Unknown Title'),
+                'url': item.get('url', ''),
+                'content': item.get('content', ''),
+                'distance': item.get('similarity', 1.0),
+                'score': 1.0 - item.get('similarity', 1.0),
+                'keywords': item.get('keywords', [])
+            })
+        
+        return results
+
+    def _keyword_search(self, query_text: str, n_results: int = 2) -> List[Dict[str, Any]]:
+        """
+        Busca documentos por palavras-chave (fallback method).
         """
         # Extrair palavras-chave da query
         query_lower = query_text.lower()
