@@ -3,6 +3,8 @@
 import chromadb
 from chromadb.types import Collection
 import uuid
+import os
+from pathlib import Path
 
 
 def dict_to_string(retrieval: dict) -> str:
@@ -23,13 +25,23 @@ class VectorDBManager:
         collection (Collection): O objeto de coleção do ChromaDB.
     """
 
-    def __init__(self, db_path: str = "../../../chroma_db"):
+    def __init__(self, db_path: str | None = None):
         """
         Inicializa o gerenciador do banco de dados vetorial.
         
         Args:
-            db_path: Caminho para o diretório do ChromaDB
+            db_path: Caminho para o diretório do ChromaDB. Se None, usa o diretório padrão.
         """
+        if db_path is None:
+            # Define o caminho padrão como agents/chroma_db
+            current_file = Path(__file__).resolve()
+            # Navega até o diretório agents (4 níveis acima: services -> app -> api -> packages -> agents)
+            agents_dir = current_file.parent.parent.parent.parent.parent
+            db_path = str(agents_dir / "chroma_db")
+        
+        # Garante que o diretório existe
+        os.makedirs(db_path, exist_ok=True)
+        
         chroma_client = chromadb.PersistentClient(path=db_path)
         self.collection: Collection = chroma_client.get_or_create_collection(
             name="nasa_space_collection"
