@@ -17,11 +17,11 @@ class Article(BaseModel):
 
     id: str = Field(..., description="ID único do artigo")
     title: str = Field(..., description="Título do artigo")
-    authors: List[str] = Field(..., description="Lista de autores")
-    year: int = Field(..., description="Ano de publicação", ge=1900, le=2100)
+    authors: List[str] = Field(default_factory=list, description="Lista de autores (pode estar vazia)")
+    year: Optional[int] = Field(None, description="Ano de publicação", ge=1900, le=2100)
     doi: Optional[str] = Field(None, description="DOI do artigo")
-    url: Optional[HttpUrl] = Field(None, description="URL do artigo")
-    abstract: str = Field(..., description="Resumo do artigo")
+    url: Optional[str] = Field(None, description="URL do artigo")  # Mudado de HttpUrl para str
+    abstract: str = Field(default="", description="Resumo do artigo")
     sections: Optional[List[Section]] = Field(None, description="Seções do artigo")
     references: Optional[List[str]] = Field(None, description="Referências bibliográficas")
     metadata: Optional[Dict[str, Any]] = Field(None, description="Metadados adicionais")
@@ -29,19 +29,16 @@ class Article(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "id": "art-001",
-                "title": "Effects of Microgravity on Stem Cells",
-                "authors": ["Silva, J.", "Santos, M."],
-                "year": 2023,
-                "doi": "10.1234/example",
-                "url": "https://example.com/article",
-                "abstract": "Este estudo investiga os efeitos da microgravidade...",
-                "sections": [
-                    {"heading": "Introduction", "content": "Microgravity affects..."},
-                    {"heading": "Methods", "content": "We cultured stem cells..."},
-                ],
-                "references": ["Author et al., 2022", "Another et al., 2021"],
-                "metadata": {"keywords": ["microgravity", "stem cells"]},
+                "id": "PMC5391430",
+                "title": "Draft Genome Sequences of Several Fungal Strains",
+                "authors": [],
+                "year": None,
+                "doi": None,
+                "url": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5391430/",
+                "abstract": "",
+                "sections": None,
+                "references": None,
+                "metadata": {"source": "ChromaDB"},
             }
         }
 
@@ -68,7 +65,7 @@ class SourceRef(BaseModel):
     title: str = Field(..., description="Título do artigo")
     year: Optional[int] = Field(None, description="Ano de publicação")
     doi: Optional[str] = Field(None, description="DOI do artigo")
-    url: Optional[HttpUrl] = Field(None, description="URL do artigo")
+    url: Optional[str] = Field(None, description="URL do artigo")  # Mudado de HttpUrl para str
     score: Optional[float] = Field(None, description="Score de relevância", ge=0.0, le=1.0)
 
 

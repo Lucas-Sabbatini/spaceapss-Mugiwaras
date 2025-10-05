@@ -7,7 +7,7 @@ import google.generativeai as genai
 from packages.api.app.agent.prompts import build_fallback_prompt, build_synthesis_prompt
 from packages.api.app.agent.retriever import get_retriever
 from packages.api.app.config import get_settings
-from packages.api.app.schemas import ChatResponse
+from packages.api.app.schemas import Article, ChatResponse, SourceRef
 from packages.api.app.services.logger import get_logger, log_error, log_info
 
 logger = get_logger(__name__)
@@ -32,23 +32,24 @@ class AgentPipeline:
         Responde a uma pergunta sobre artigos científicos.
         
         Fluxo:
-        1. Recupera documentos relevantes usando VectorDBManager
+        1. Recupera documentos relevantes usando VectorDBManager com metadados
         2. Sintetiza resposta usando LLM com os documentos como contexto
-        3. Retorna resposta
+        3. Monta sources e article a partir dos metadados
+        4. Retorna resposta completa
         
         Args:
             question: Pergunta do usuário
             top_k: Número de documentos a recuperar
             
         Returns:
-            ChatResponse com resposta
+            ChatResponse com resposta, sources e article
         """
         log_info(logger, "Pipeline iniciado", question_len=len(question), top_k=top_k)
 
-        # 1. Retrieval - retorna lista de strings
-        docs = self.retriever.retrieve(question, top_k=top_k)
+        # 1. Retrieval com metadados - retorna lista de dicts estruturados
+        docs_metadata = self.retriever.retrieve_with_metadata(question, top_k=top_k)
 
-        if not docs:
+        if not docs_metadata:
             # Sem documentos relevantes
             fallback_answer = build_fallback_prompt(question)
             log_info(logger, "Nenhum documento encontrado, retornando fallback")
@@ -59,17 +60,60 @@ class AgentPipeline:
                 article=None,
             )
 
-        # 2. Síntese com LLM
-        answer_text = self._synthesize(question, docs)
+        # 2. Preparar documentos para síntese (formato antigo - strings)
+        docs_for_synthesis = [
+            f"Title: {doc['title']}\nContent: {doc['content'][:500]}..." 
+            for doc in docs_metadata
+        ]
+
+        # 3. Síntese com LLM
+        answer_text = self._synthesize(question, docs_for_synthesis)
+
+        # 4. Montar sources a partir dos metadados
+        sources = [
+            SourceRef(
+                id=doc['id'],
+                title=doc['title'],
+                year=None,  # Não disponível nos dados atuais
+                doi=None,  # Não disponível nos dados atuais
+                url=doc['url'] if doc['url'] else None,
+                score=round(doc['score'], 3)
+            )
+            for doc in docs_metadata
+        ]
+
+        # 5. Montar article (primeiro resultado - mais relevante)
+        top_doc = docs_metadata[0]
+        article = Article(
+            id=top_doc['id'],
+            title=top_doc['title'],
+            authors=[],  # Não disponível nos dados atuais
+            year=None,  # Não disponível nos dados atuais
+            doi=None,  # Não disponível nos dados atuais
+            url=top_doc['url'] if top_doc['url'] else None,
+            abstract=top_doc['document'][:500] if top_doc['document'] else "",  # Usar documento como abstract
+            sections=None,  # Não disponível nos dados atuais
+            references=None,  # Não disponível nos dados atuais
+            metadata={
+                "score": top_doc['score'],
+                "source": "ChromaDB",
+                "full_content": top_doc['content'][:1000]  # Preview do conteúdo
+            }
+        )
 
         log_info(
             logger,
             "Pipeline concluído",
             answer_len=len(answer_text),
-            docs_count=len(docs),
+            sources_count=len(sources),
+            article_id=article.id,
         )
 
-        return ChatResponse(answer=answer_text, sources=[], article=None)
+        return ChatResponse(
+            answer=answer_text, 
+            sources=sources, 
+            article=article
+        )
 
     def _synthesize(self, question: str, docs: List[str]) -> str:
         """Sintetiza resposta usando LLM."""

@@ -72,9 +72,9 @@ async def main():
                     metadata_string = f"'title': '{escaped_title}', 'url': '{url}', 'content': '{escaped_content}'"
 
                     # Passa o ID extraído da URL para a função add_document
-                    db.add_document(
-                        abstract=document_to_vectorize, 
-                        document=metadata_string, 
+                    db.add_document_id(
+                        document=document_to_vectorize, 
+                        text=metadata_string, 
                         doc_id=doc_id
                     )
                     
