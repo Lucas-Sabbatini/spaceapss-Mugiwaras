@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import List, Dict, Any
 
+from packages.api.app.config import get_settings
 from packages.api.app.services.cosmos_data import CosmosDataManager
 from packages.api.app.services.logger import get_logger, log_error, log_info
 
@@ -15,7 +16,13 @@ class Retriever:
     def __init__(self):
         """Inicializa retriever."""
         try:
-            self.db_manager = CosmosDataManager()
+            settings = get_settings()
+            self.db_manager = CosmosDataManager(
+                endpoint=settings.cosmos_endpoint,
+                key=settings.cosmos_key,
+                database_name=settings.cosmos_database,
+                container_name=settings.cosmos_container
+            )
             log_info(logger, "Retriever inicializado com CosmosDataManager")
         except Exception as e:
             log_error(logger, "Erro ao inicializar CosmosDataManager", e)

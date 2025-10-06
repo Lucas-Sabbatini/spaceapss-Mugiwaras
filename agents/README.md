@@ -205,6 +205,8 @@ O ChromaDB é inicializado automaticamente em `chroma_db/` e persiste os dados l
 | `ENV` | Ambiente (dev/prod) | `dev` |
 | `CORS_ORIGINS` | Origens permitidas CORS | `http://localhost:5173` |
 
+Note: Azure Cosmos DB (used in some deployments) is optional. If `COSMOS_ENDPOINT` and `COSMOS_KEY` are not set, the application will continue running but any features that query Cosmos will return empty results or fall back to keyword search where possible. To enable full Cosmos functionality, set the environment variables described above.
+
 ## 📝 Logs
 
 Os logs são salvos em:

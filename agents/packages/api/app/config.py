@@ -1,9 +1,13 @@
 """Configurações da aplicação."""
 
 from functools import lru_cache
+from pathlib import Path
 from typing import List, Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Caminho para o diretório raiz do projeto (onde está o .env)
+PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 
 
 class Settings(BaseSettings):
@@ -24,6 +28,12 @@ class Settings(BaseSettings):
     mongodb_database: str = "spaceapss"
     mongodb_collection: str = "experiments"
 
+    # Azure Cosmos DB
+    cosmos_endpoint: str = ""
+    cosmos_key: str = ""
+    cosmos_database: str = "spaceapss"
+    cosmos_container: str = "articles"
+
     # API
     api_port: int = 8000
     env: Literal["dev", "prod"] = "dev"
@@ -32,7 +42,7 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(PROJECT_ROOT / ".env"),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",

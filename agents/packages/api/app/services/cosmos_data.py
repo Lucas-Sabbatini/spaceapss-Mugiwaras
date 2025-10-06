@@ -2,9 +2,8 @@
 
 import os
 import re
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from azure.cosmos import CosmosClient, PartitionKey, exceptions
-import google.generativeai as genai
 
 
 class CosmosDataManager:
@@ -14,7 +13,13 @@ class CosmosDataManager:
     Armazena artigos científicos e permite busca por palavras-chave.
     """
 
-    def __init__(self, endpoint: str = None, key: str = None, database_name: str = None, container_name: str = None):
+    def __init__(
+        self, 
+        endpoint: Optional[str] = None, 
+        key: Optional[str] = None, 
+        database_name: Optional[str] = None, 
+        container_name: Optional[str] = None
+    ):
         """
         Inicializa o gerenciador do Cosmos DB.
         
@@ -29,20 +34,28 @@ class CosmosDataManager:
         self.key = key or os.getenv("COSMOS_KEY")
         self.database_name = database_name or os.getenv("COSMOS_DATABASE", "spaceapss")
         self.container_name = container_name or os.getenv("COSMOS_CONTAINER", "articles")
-        
+        # If credentials are missing, mark manager as disabled instead of raising.
         if not self.endpoint or not self.key:
-            raise ValueError(
-                "Cosmos DB endpoint e key não configurados. "
-                "Defina COSMOS_ENDPOINT e COSMOS_KEY ou passe como parâmetros."
-            )
-        
+            print("⚠️  Cosmos DB endpoint/key não configurados. CosmosDataManager ficará desabilitado.")
+            self.enabled = False
+            self.client = None
+            self.database = None
+            self.container = None
+            return
+
+        self.enabled = True
         # Conectar ao Cosmos DB
         try:
             self.client = CosmosClient(self.endpoint, self.key)
             print("✅ Conectado ao Azure Cosmos DB!")
         except Exception as e:
             print(f"❌ Erro ao conectar: {e}")
-            raise
+            # If connection fails, disable manager but do not raise to avoid breaking the app.
+            self.enabled = False
+            self.client = None
+            self.database = None
+            self.container = None
+            return
         
         # Criar/obter database e container
         try:
@@ -53,7 +66,12 @@ class CosmosDataManager:
             print(f"   Total de documentos: {self.get_total_documents()}")
         except exceptions.CosmosResourceNotFoundError:
             print(f"❌ Database ou Container não encontrado!")
-            raise
+            # If resources are not found, disable manager instead of raising.
+            self.enabled = False
+            self.client = None
+            self.database = None
+            self.container = None
+            return
 
     def add_document(self, document: str, text: str) -> None:
         """
@@ -63,6 +81,10 @@ class CosmosDataManager:
             document: Conteúdo do documento (abstract)
             text: Metadados em formato string
         """
+        if not getattr(self, "enabled", False):
+            print("⚠️  CosmosDataManager desabilitado: add_document ignorado.")
+            return
+
         import uuid
         doc_id = str(uuid.uuid4())
         self.add_document_id(document, text, doc_id)
@@ -91,6 +113,10 @@ class CosmosDataManager:
             'keywords': self._extract_keywords(document, metadata.get('title', ''))
         }
         
+        if not getattr(self, "enabled", False):
+            print(f"⚠️  CosmosDataManager desabilitado: upsert {doc_id} ignorado.")
+            return
+
         # Inserir ou atualizar (upsert)
         try:
             self.container.upsert_item(body=doc)
@@ -127,6 +153,10 @@ class CosmosDataManager:
         """
         Busca documentos usando vector search se disponível, senão fallback para keyword search.
         """
+        if not getattr(self, "enabled", False):
+            print("⚠️  CosmosDataManager desabilitado: retornando lista vazia no query_with_metadata.")
+            return []
+
         # Tentar busca vetorial primeiro
         try:
             return self.vector_search(query_text, n_results)
@@ -145,7 +175,15 @@ class CosmosDataManager:
         Returns:
             Lista de documentos ordenados por similaridade
         """
+        if not getattr(self, "enabled", False):
+            raise Exception("CosmosDataManager desabilitado: não é possível executar vector_search.")
+
         # Configurar Gemini
+        try:
+            import google.generativeai as genai
+        except Exception as ie:
+            raise ImportError("google.generativeai não instalado: instale o pacote necessário para usar vector_search") from ie
+
         api_key = os.getenv('GOOGLE_API_KEY')
         if not api_key:
             raise ValueError("GOOGLE_API_KEY não configurada")
@@ -214,6 +252,10 @@ class CosmosDataManager:
             if len(clean_word) >= 4:
                 words.append(clean_word)
         
+        if not getattr(self, "enabled", False):
+            print("⚠️  CosmosDataManager desabilitado: retornando lista vazia no _keyword_search.")
+            return []
+
         if not words:
             return self._get_random_articles(n_results)
         
@@ -273,6 +315,10 @@ class CosmosDataManager:
 
     def _get_random_articles(self, n: int) -> List[Dict[str, Any]]:
         """Retorna N artigos aleatórios."""
+        if not getattr(self, "enabled", False):
+            print("⚠️  CosmosDataManager desabilitado: retornando lista vazia no _get_random_articles.")
+            return []
+
         try:
             query = f"SELECT TOP {n} * FROM c"
             items = list(self.container.query_items(
@@ -320,6 +366,9 @@ class CosmosDataManager:
 
     def get_total_documents(self) -> int:
         """Retorna o número total de documentos armazenados."""
+        if not getattr(self, "enabled", False):
+            return 0
+
         try:
             query = "SELECT VALUE COUNT(1) FROM c"
             items = list(self.container.query_items(
