@@ -18,7 +18,9 @@ class CosmosDataManager:
         endpoint: Optional[str] = None, 
         key: Optional[str] = None, 
         database_name: Optional[str] = None, 
-        container_name: Optional[str] = None
+        container_name: Optional[str] = None,
+        google_api_key: Optional[str] = None,
+        google_embed_model: Optional[str] = None
     ):
         """
         Inicializa o gerenciador do Cosmos DB.
@@ -28,12 +30,16 @@ class CosmosDataManager:
             key: Primary key (opcional, usa env var)
             database_name: Nome do database (opcional, usa env var)
             container_name: Nome do container (opcional, usa env var)
+            google_api_key: Google API Key para embeddings (opcional)
+            google_embed_model: Modelo de embedding do Google (opcional)
         """
         # Obter configurações de variáveis de ambiente ou parâmetros
         self.endpoint = endpoint or os.getenv("COSMOS_ENDPOINT")
         self.key = key or os.getenv("COSMOS_KEY")
         self.database_name = database_name or os.getenv("COSMOS_DATABASE", "spaceapss")
         self.container_name = container_name or os.getenv("COSMOS_CONTAINER", "articles")
+        self.google_api_key = google_api_key or os.getenv("GOOGLE_API_KEY", "")
+        self.google_embed_model = google_embed_model or os.getenv("GOOGLE_EMBED_MODEL", "models/text-embedding-004")
         # If credentials are missing, mark manager as disabled instead of raising.
         if not self.endpoint or not self.key:
             print("⚠️  Cosmos DB endpoint/key não configurados. CosmosDataManager ficará desabilitado.")
@@ -184,16 +190,14 @@ class CosmosDataManager:
         except Exception as ie:
             raise ImportError("google.generativeai não instalado: instale o pacote necessário para usar vector_search") from ie
 
-        api_key = os.getenv('GOOGLE_API_KEY')
-        if not api_key:
+        if not self.google_api_key:
             raise ValueError("GOOGLE_API_KEY não configurada")
         
-        genai.configure(api_key=api_key)
+        genai.configure(api_key=self.google_api_key)
         
         # Gerar embedding da query
-        model = os.getenv('GOOGLE_EMBED_MODEL', 'models/text-embedding-004')
         result = genai.embed_content(
-            model=model,
+            model=self.google_embed_model,
             content=query_text,
             task_type="retrieval_query"
         )
@@ -227,16 +231,32 @@ class CosmosDataManager:
         # Formatar resultados
         results = []
         for item in items:
+            # Similaridade do Cosmos DB: menor = mais similar
+            # Converter para score: maior = melhor
+            similarity = item.get('similarity', 1.0)
+            score = max(0.0, 1.0 - similarity)  # Score entre 0 e 1
+            
+            # Extrair ano do título ou metadados se disponível
+            year = None
+            title = item.get('title', 'Unknown Title')
+            import re
+            year_match = re.search(r'\b(19|20)\d{2}\b', title)
+            if year_match:
+                year = int(year_match.group())
+            
             results.append({
                 'id': item.get('doc_id', item.get('id', '')),
                 'document': item.get('abstract', ''),
-                'title': item.get('title', 'Unknown Title'),
+                'title': title,
                 'url': item.get('url', ''),
                 'content': item.get('content', ''),
-                'distance': item.get('similarity', 1.0),
-                'score': 1.0 - item.get('similarity', 1.0),
-                'keywords': item.get('keywords', [])
+                'distance': similarity,
+                'score': score,
+                'keywords': item.get('keywords', []),
+                'year': year
             })
+            
+            print(f"  📄 {item.get('doc_id', 'unknown')[:15]}: similarity={similarity:.4f}, score={score:.4f}")
         
         return results
 
@@ -297,14 +317,23 @@ class CosmosDataManager:
                 item = doc['item']
                 score = doc['score']
                 
+                # Extrair ano do título
+                year = None
+                title = item.get('title', 'Unknown Title')
+                import re
+                year_match = re.search(r'\b(19|20)\d{2}\b', title)
+                if year_match:
+                    year = int(year_match.group())
+                
                 results.append({
                     'id': item.get('doc_id', item.get('id', '')),
                     'document': item.get('abstract', ''),
-                    'title': item.get('title', 'Unknown Title'),
+                    'title': title,
                     'url': item.get('url', ''),
                     'content': item.get('content', ''),
                     'distance': 1.0 - score,
-                    'score': score
+                    'score': score,
+                    'year': year
                 })
             
             return results

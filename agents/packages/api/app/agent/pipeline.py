@@ -74,7 +74,7 @@ class AgentPipeline:
             SourceRef(
                 id=doc['id'],
                 title=doc['title'],
-                year=None,  # Não disponível nos dados atuais
+                year=doc.get('year'),  # Extraído do título ou metadados
                 doi=None,  # Não disponível nos dados atuais
                 url=doc['url'] if doc['url'] else None,
                 score=round(doc['score'], 3)
@@ -88,7 +88,7 @@ class AgentPipeline:
             id=top_doc['id'],
             title=top_doc['title'],
             authors=[],  # Não disponível nos dados atuais
-            year=None,  # Não disponível nos dados atuais
+            year=top_doc.get('year'),  # Extraído do título ou metadados
             doi=None,  # Não disponível nos dados atuais
             url=top_doc['url'] if top_doc['url'] else None,
             abstract=top_doc['document'][:500] if top_doc['document'] else "",  # Usar documento como abstract
@@ -96,7 +96,7 @@ class AgentPipeline:
             references=None,  # Não disponível nos dados atuais
             metadata={
                 "score": top_doc['score'],
-                "source": "ChromaDB",
+                "source": "CosmosDB",
                 "full_content": top_doc['content'][:1000]  # Preview do conteúdo
             }
         )

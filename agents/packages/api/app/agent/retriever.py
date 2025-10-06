@@ -21,7 +21,9 @@ class Retriever:
                 endpoint=settings.cosmos_endpoint,
                 key=settings.cosmos_key,
                 database_name=settings.cosmos_database,
-                container_name=settings.cosmos_container
+                container_name=settings.cosmos_container,
+                google_api_key=settings.google_api_key,
+                google_embed_model=settings.google_embed_model
             )
             log_info(logger, "Retriever inicializado com CosmosDataManager")
         except Exception as e:
