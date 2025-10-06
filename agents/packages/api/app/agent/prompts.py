@@ -17,31 +17,46 @@ def build_synthesis_prompt(question: str, context_docs: List[str]) -> str:
     # Montar contexto dos documentos (apenas strings)
     context_parts = []
     for idx, doc_text in enumerate(context_docs[:5], 1):  # Máximo 5 docs no contexto
-        context_parts.append(f"[Documento {idx}]\n{doc_text}\n")
+        context_parts.append(f"[Document {idx}]\n{doc_text}\n")
 
     context_text = "\n".join(context_parts)
 
     # Template do prompt
-    prompt = f"""Você é um assistente especializado em artigos científicos sobre ciências espaciais e biomedicina.
+    prompt = f"""You are a specialized assistant for scientific articles about space sciences and biomedicine.
 
-Sua tarefa é responder a pergunta abaixo de forma CONCISA e OBJETIVA, baseando-se EXCLUSIVAMENTE nos documentos fornecidos.
+Your task is to provide a COMPREHENSIVE and DETAILED response to the question below, based EXCLUSIVELY on the provided documents.
 
-REGRAS IMPORTANTES:
-1. Responda em português brasileiro (PT-BR)
-2. Limite sua resposta a 6-8 linhas
-3. Seja direto ao ponto, sem introduções desnecessárias
-4. Cite as fontes mencionadas nos documentos
-5. NÃO invente informações que não estão nos documentos
-6. Se não houver informação suficiente, diga claramente: "Não encontrei informações suficientes nos artigos disponíveis"
-7. Foque nos achados principais e conclusões
+IMPORTANT RULES:
+1. Respond in English using proper Markdown formatting
+2. Provide a thorough and complete answer with sufficient detail
+3. Include relevant background information, methods, findings, and implications
+4. Always cite the sources mentioned in the documents
+5. DO NOT invent information that is not in the documents
+6. If there is insufficient information, start with a clear statement and then provide what information IS available
+7. Structure your response logically with clear sections
+8. Include specific data, numbers, and results when available in the documents
+9. Explain technical terms or concepts when necessary for understanding
+10. Highlight key findings, significant results, and their scientific implications
 
-DOCUMENTOS RELEVANTES:
+FORMATTING GUIDELINES:
+- Use **bold** for important terms, findings, or emphasis
+- Use *italics* for document references or technical terms
+- Use bullet points (- or *) for lists of findings, methods, or key points
+- Use > for important quotes or highlighted information
+- Organize information with clear paragraph breaks
+- When listing multiple findings, use bullet points for clarity
+- If information is incomplete, structure your response as:
+  1. First paragraph: State what information is missing or limited
+  2. Following section: "**Available Information:**" followed by bullet points of what IS known
+  3. Optional: Brief conclusion about limitations
+
+RELEVANT DOCUMENTS:
 {context_text}
 
-PERGUNTA:
+QUESTION:
 {question}
 
-RESPOSTA (6-8 linhas, citando fontes):"""
+DETAILED RESPONSE (using Markdown formatting with citations):"""
 
     return prompt
 
@@ -56,8 +71,13 @@ def build_fallback_prompt(question: str) -> str:
     Returns:
         Mensagem de fallback
     """
-    return f"""Não encontrei artigos científicos relevantes no banco de dados para responder à pergunta:
+    return f"""**No Relevant Articles Found**
 
-"{question}"
+I could not find relevant scientific articles in the database to answer the question:
 
-Por favor, tente reformular sua pergunta ou verificar se os artigos sobre este tema foram ingeridos no sistema."""
+> "{question}"
+
+**Suggestions:**
+- Try rephrasing your question with different keywords
+- Verify if articles on this topic have been ingested into the system
+- Check if your query is within the scope of space sciences and biomedicine research"""

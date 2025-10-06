@@ -38,6 +38,7 @@ export interface ArticleDetail {
   abstract?: string;
   summary_en?: string;
   year?: number;
+  url?: string;
   authors: string[];
   institutions: string[];
   funding: string[];

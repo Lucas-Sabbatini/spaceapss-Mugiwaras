@@ -5,11 +5,12 @@ Sistema de agentes inteligentes para busca e resposta sobre artigos científicos
 ## 📋 Visão Geral
 
 O SpaceAPSS Agents é uma aplicação backend construída com FastAPI que utiliza:
-- **ChromaDB** como banco de dados vetorial para armazenamento e busca semântica
-- **Google Gemini** (gemini-2.0-flash) como modelo de linguagem
-- **Text Embedding 004** para embeddings de documentos
-- **Redis** para cache e gerenciamento de sessões
+- **Azure Cosmos DB (SQL API)** como banco de dados NoSQL com suporte a vector search
+- **Google Gemini 2.0 Flash** como modelo de linguagem para geração de respostas
+- **Text Embedding 004** para geração de embeddings vetoriais (768 dimensões)
+- **Python Azure SDK** para integração com Azure Cosmos DB
 - **RAG Pipeline** para gerar respostas contextualizadas baseadas em artigos científicos
+- **React Markdown** no frontend para renderização de respostas formatadas
 
 ## 🏗️ Estrutura do Projeto
 
@@ -19,39 +20,40 @@ agents/
 │   ├── extractor.py           # Extração de conteúdo de URLs
 │   ├── fetchers.py            # Busca de documentos
 │   ├── ncbi_fetcher.py        # Integração com NCBI/PubMed
-│   └── sectionizer.py         # Segmentação de documentos
+│   ├── sectionizer.py         # Segmentação de documentos
+│   └── enrichment_pipeline.py # Pipeline de enriquecimento com embeddings
 ├── packages/api/app/          # Aplicação FastAPI
 │   ├── agent/                 # Pipeline do agente RAG
 │   │   ├── pipeline.py        # Orquestração do pipeline
-│   │   ├── prompts.py         # Templates de prompts
-│   │   └── retriever.py       # Sistema de recuperação
+│   │   ├── prompts.py         # Templates de prompts com Markdown
+│   │   └── retriever.py       # Sistema de recuperação semântica
 │   ├── routers/               # Endpoints da API
-│   │   ├── articles.py        # Rotas de artigos
-│   │   ├── chat.py            # Rotas de chat
-│   │   └── health.py          # Health checks
+│   │   ├── articles.py        # Rotas de artigos (GET /article/{id})
+│   │   ├── chat.py            # Rotas de chat (POST /chat)
+│   │   └── health.py          # Health checks (GET /health)
 │   ├── services/              # Serviços auxiliares
-│   │   ├── logger.py          # Sistema de logging
-│   │   └── vector_db.py       # Gerenciador ChromaDB
-│   ├── config.py              # Configurações
-│   ├── deps.py                # Dependências
-│   ├── main.py                # Aplicação principal
-│   └── schemas.py             # Modelos Pydantic
+│   │   ├── logger.py          # Sistema de logging estruturado
+│   │   └── cosmos_data.py     # Gerenciador Azure Cosmos DB
+│   ├── config.py              # Configurações da aplicação
+│   ├── deps.py                # Dependências e injeção
+│   ├── main.py                # Aplicação principal FastAPI
+│   └── schemas.py             # Modelos Pydantic (validação)
 ├── shared/                    # Dados compartilhados
-│   ├── SB_publication_PMC.csv # Base de artigos
-│   └── extracted_data.jsonl   # Dados extraídos
-├── chroma_db/                 # Banco de dados vetorial
-├── proccess_batch.py          # Script de processamento em lote
-├── test_integration.py        # Testes de integração
-└── pyproject.toml             # Configuração do projeto
+│   ├── SB_publication_PMC.csv            # Base de artigos PMC
+│   ├── extracted_data.jsonl              # Dados extraídos (legado)
+│   └── extracted_data_with_embeddings.jsonl  # Dados com embeddings
+├── process_with_embeddings.py # Script de processamento em lote
+├── test_vector_search.py      # Testes de busca vetorial
+└── pyproject.toml             # Configuração do projeto Python
 ```
 
 ## 🚀 Como Rodar
 
 ### Pré-requisitos
 
-- Python 3.11+
-- Redis (local ou cloud)
-- Chave de API do Google Gemini
+- Python 3.11+ (recomendado Python 3.12)
+- Azure Cosmos DB account (ou criar uma conta gratuita)
+- Chave de API do Google Gemini (Google AI Studio)
 
 ### 1. Configurar Ambiente Virtual
 
@@ -83,44 +85,59 @@ pip install -e ".[dev]"
 Crie um arquivo `.env` na pasta `agents/` com as seguintes variáveis:
 
 ```bash
-# Google Gemini
+# Google AI
 GOOGLE_API_KEY=sua_chave_api_aqui
 GOOGLE_EMBED_MODEL=models/text-embedding-004
-GOOGLE_CHAT_MODEL=gemini-2.0-flash
+GOOGLE_CHAT_MODEL=gemini-2.0-flash-exp
 
-# Redis
-REDIS_URL=redis://localhost:6379
-REDIS_USERNAME=default
-REDIS_PASSWORD=sua_senha_aqui
+# Azure Cosmos DB
+COSMOS_ENDPOINT=https://seu-cosmos-account.documents.azure.com:443/
+COSMOS_KEY=sua_chave_primaria_aqui
+COSMOS_DATABASE=cosmos27818-db
+COSMOS_CONTAINER=cosmos27818-container
 
-# API
+# API Configuration
 API_PORT=8000
 ENV=dev
 
 # CORS (frontend)
-CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+CORS_ORIGINS=http://localhost:5173,http://localhost:5174
 ```
+
+**Obter credenciais:**
+- **Google API Key**: https://aistudio.google.com/app/apikey
+- **Azure Cosmos DB**: Portal Azure > Cosmos DB > Keys
 
 ### 4. Processar Base de Artigos (Primeira Execução)
 
 Antes de iniciar a API, processe a base de artigos científicos:
 
 ```bash
-python proccess_batch.py
+python process_with_embeddings.py
 ```
 
 Este script:
 - Lê o CSV com links de artigos (`shared/SB_publication_PMC.csv`)
-- Extrai conteúdo via NCBI API
-- Gera embeddings e armazena no ChromaDB
-- Salva backup em JSONL
+- Extrai conteúdo via NCBI E-utilities API
+- Gera embeddings com Google Text Embedding 004 (768 dimensões)
+- Armazena no Azure Cosmos DB com vector index
+- Salva backup em JSONL com embeddings
 
-**Tempo estimado:** ~30-60 minutos dependendo da quantidade de artigos
+**Tempo estimado:** ~30-60 minutos dependendo da quantidade de artigos e conexão
+
+**Progresso:**
+- O script mostra progresso em tempo real
+- Artigos processados: X/596
+- Embeddings gerados e armazenados no Cosmos DB
 
 ### 5. Iniciar a API
 
 ```bash
-uvicorn packages.api.app.main:app --reload --port 8000
+# Desenvolvimento (com hot reload)
+python3 -m uvicorn packages.api.app.main:app --reload --host 0.0.0.0 --port 8000
+
+# Produção
+python3 -m uvicorn packages.api.app.main:app --host 0.0.0.0 --port 8000 --workers 4
 ```
 
 A API estará disponível em: `http://localhost:8000`
@@ -155,17 +172,45 @@ GET /articles?limit=10&offset=0
 
 ### Buscar Artigo por ID
 ```http
-GET /articles/{article_id}
+GET /article/{experiment_id}
+
+# Exemplo
+GET /article/article-1
+GET /article/article-90
+```
+
+**Resposta:**
+```json
+{
+  "experiment_id": "article-1",
+  "title": "Mice in Bion-M 1 space mission: training and selection",
+  "abstract": "After a 16-year hiatus, Russia resumed...",
+  "url": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4136787/",
+  "full_text": "Complete article text...",
+  "authors": [],
+  "year": null
+}
 ```
 
 ## 🧪 Testes
 
 ```bash
-# Executar testes de integração
-pytest test_integration.py -v
+# Testar busca vetorial no Cosmos DB
+python test_vector_search.py
 
-# Com cobertura
-pytest test_integration.py --cov=packages --cov-report=html
+# Verificar saúde da API
+curl http://localhost:8000/health
+
+# Testar endpoint de chat
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "What are the effects of microgravity on human cells?",
+    "top_k": 5
+  }'
+
+# Buscar artigo específico
+curl http://localhost:8000/article/article-1
 ```
 
 ## 🔧 Desenvolvimento
@@ -182,30 +227,76 @@ ruff check packages/ extract/
 
 ### Estrutura do Pipeline RAG
 
-1. **Retrieval:** Busca semântica no ChromaDB usando embeddings
-2. **Ranking:** Ordena documentos por relevância
-3. **Synthesis:** Gera resposta usando Google Gemini com contexto recuperado
-4. **Fallback:** Responde sem contexto se não encontrar artigos relevantes
+1. **Retrieval:** Busca semântica no Azure Cosmos DB usando vector search com embeddings
+2. **Ranking:** Ordena documentos por similaridade cosine (score normalizado 0-1)
+3. **Synthesis:** Gera resposta em inglês usando Google Gemini 2.0 Flash com contexto recuperado
+4. **Formatting:** Resposta estruturada em Markdown com bold, listas, quotes, etc.
+5. **Fallback:** Responde de forma educada quando não encontra artigos relevantes
 
-## 📊 Banco de Dados Vetorial
+**Prompt Engineering:**
+- Instruções para respostas em inglês
+- Diretrizes de formatação Markdown
+- Estruturação lógica (sections, bullet points)
+- Citação obrigatória de fontes
+- Transparência sobre limitações
 
-O ChromaDB é inicializado automaticamente em `chroma_db/` e persiste os dados localmente. Não é necessário configuração adicional.
+## 📊 Banco de Dados
 
-**Coleção:** `nasa_space_collection`
+### Azure Cosmos DB (SQL API)
+
+**Configuração:**
+- **Account**: Criado via Azure Portal
+- **Database**: `cosmos27818-db`
+- **Container**: `cosmos27818-container`
+- **Partition Key**: `/experiment_id`
+- **RU/s**: 400 (shared throughput - desenvolvimento)
+
+**Vector Search:**
+- **Embedding Dimensions**: 768 (Google Text Embedding 004)
+- **Similarity Metric**: Cosine similarity
+- **Index Type**: Vector index configurado no container
+- **Query**: `VectorDistance()` function para busca semântica
+
+**Estrutura do Documento:**
+```json
+{
+  "id": "article-1",
+  "experiment_id": "article-1",
+  "title": "Article Title",
+  "abstract": "Abstract text...",
+  "full_text": "Complete article...",
+  "url": "https://www.ncbi.nlm.nih.gov/pmc/...",
+  "embedding": [0.123, -0.456, ...],  // 768 dimensões
+  "authors": [],
+  "year": 2013
+}
+```
+
+**Performance:**
+- Latência: ~200-400ms para queries vetoriais
+- Throughput: Configurável via RU/s
+- Escalabilidade: Automática horizontal partition
 
 ## 🔑 Variáveis de Ambiente
 
-| Variável | Descrição | Padrão |
-|----------|-----------|--------|
-| `GOOGLE_API_KEY` | Chave API do Google Gemini | - |
-| `GOOGLE_EMBED_MODEL` | Modelo de embedding | `models/text-embedding-004` |
-| `GOOGLE_CHAT_MODEL` | Modelo de chat | `gemini-2.0-flash` |
-| `REDIS_URL` | URL de conexão Redis | `redis://localhost:6379` |
-| `API_PORT` | Porta da API | `8000` |
-| `ENV` | Ambiente (dev/prod) | `dev` |
-| `CORS_ORIGINS` | Origens permitidas CORS | `http://localhost:5173` |
+| Variável | Descrição | Padrão | Obrigatório |
+|----------|-----------|--------|-------------|
+| `GOOGLE_API_KEY` | Chave API do Google Gemini | - | ✅ |
+| `GOOGLE_EMBED_MODEL` | Modelo de embedding | `models/text-embedding-004` | ✅ |
+| `GOOGLE_CHAT_MODEL` | Modelo de chat | `gemini-2.0-flash-exp` | ✅ |
+| `COSMOS_ENDPOINT` | Endpoint do Azure Cosmos DB | - | ✅ |
+| `COSMOS_KEY` | Chave primária do Cosmos DB | - | ✅ |
+| `COSMOS_DATABASE` | Nome do database | `cosmos27818-db` | ✅ |
+| `COSMOS_CONTAINER` | Nome do container | `cosmos27818-container` | ✅ |
+| `API_PORT` | Porta da API | `8000` | ❌ |
+| `ENV` | Ambiente (dev/prod) | `dev` | ❌ |
+| `CORS_ORIGINS` | Origens permitidas CORS | `http://localhost:5173` | ❌ |
 
-Note: Azure Cosmos DB (used in some deployments) is optional. If `COSMOS_ENDPOINT` and `COSMOS_KEY` are not set, the application will continue running but any features that query Cosmos will return empty results or fall back to keyword search where possible. To enable full Cosmos functionality, set the environment variables described above.
+**Notas:**
+- Azure Cosmos DB é obrigatório para funcionamento completo
+- Sem Cosmos DB configurado, a API iniciará mas retornará resultados vazios
+- Google API Key pode ser obtida em: https://aistudio.google.com/app/apikey
+- Cosmos DB pode ser criado gratuitamente no Azure Portal (tier gratuito disponível)
 
 ## 📝 Logs
 
@@ -221,39 +312,78 @@ Níveis de log:
 
 ## 🐛 Troubleshooting
 
-### Erro: "Permission denied (os error 13)" no ChromaDB
+### Erro: "Azure Cosmos DB connection failed"
 
 ```bash
-# Verificar permissões do diretório
-chmod -R 755 chroma_db/
+# Verificar variáveis de ambiente
+cat .env | grep COSMOS
 
-# Ou remover e recriar
-rm -rf chroma_db/
-python proccess_batch.py
-```
+# Testar conexão
+python test_vector_search.py
 
-### Erro: "Redis connection refused"
-
-Certifique-se que o Redis está rodando:
-
-```bash
-# Iniciar Redis localmente
-redis-server
-
-# Ou usar Docker
-docker run -d -p 6379:6379 redis:latest
+# Verificar credenciais no Azure Portal
+# Portal Azure > Cosmos DB Account > Keys
 ```
 
 ### Erro: "Google API Key not found"
 
-Verifique se o arquivo `.env` existe e contém `GOOGLE_API_KEY`.
+Verifique se o arquivo `.env` existe e contém `GOOGLE_API_KEY`:
+
+```bash
+# Verificar .env
+cat .env | grep GOOGLE_API_KEY
+
+# Ou criar novo
+echo "GOOGLE_API_KEY=sua_chave_aqui" >> .env
+```
+
+### Erro: "No documents found" / Resultados vazios
+
+```bash
+# Verificar se o Cosmos DB foi populado
+python test_vector_search.py
+
+# Se necessário, reprocessar artigos
+python process_with_embeddings.py
+```
+
+### API não inicia / Porta em uso
+
+```bash
+# Verificar processos na porta 8000
+lsof -i :8000  # Linux/macOS
+# ou
+netstat -ano | findstr :8000  # Windows
+
+# Matar processo
+kill -9 <PID>
+
+# Ou usar outra porta
+python3 -m uvicorn packages.api.app.main:app --port 8001
+```
+
+### Frontend não conecta com API
+
+```bash
+# Verificar CORS no .env
+cat .env | grep CORS_ORIGINS
+
+# Adicionar origem do frontend
+CORS_ORIGINS=http://localhost:5173,http://localhost:5174
+
+# Reiniciar API
+```
 
 ## 📚 Recursos Adicionais
 
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [ChromaDB Documentation](https://docs.trychroma.com/)
+- [Azure Cosmos DB for NoSQL](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/)
+- [Vector Search in Cosmos DB](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/vector-search)
 - [Google Gemini API](https://ai.google.dev/docs)
+- [Google AI Studio](https://aistudio.google.com/)
 - [NCBI E-utilities](https://www.ncbi.nlm.nih.gov/books/NBK25501/)
+- [React Markdown](https://github.com/remarkjs/react-markdown)
+- [Remark GFM](https://github.com/remarkjs/remark-gfm)
 
 ## 👥 Contribuindo
 

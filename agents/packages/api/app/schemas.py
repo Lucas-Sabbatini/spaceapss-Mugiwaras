@@ -22,6 +22,7 @@ class ArticleDetail(BaseModel):
     abstract: Optional[str] = Field(None, description="Resumo original")
     summary_en: Optional[str] = Field(None, description="Resumo em inglês")
     year: Optional[int] = Field(None, description="Ano de publicação")
+    url: Optional[str] = Field(None, description="URL do artigo original")
     authors: List[str] = Field(default_factory=list, description="Lista de autores")
     institutions: List[str] = Field(default_factory=list, description="Instituições")
     funding: List[str] = Field(default_factory=list, description="Fontes de financiamento")
