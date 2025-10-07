@@ -68,13 +68,10 @@ source .venv/bin/activate  # Linux/macOS
 ### 2. Instalar Dependências
 
 ```bash
-# Instalar dependências básicas
-pip install -r ../requirements.txt
-
-# Instalar o projeto em modo desenvolvimento
+# Instalar o projeto com todas as dependências
 pip install -e .
 
-# Instalar dependências de desenvolvimento (opcional)
+# OU instalar com dependências de desenvolvimento
 pip install -e ".[dev]"
 ```
 

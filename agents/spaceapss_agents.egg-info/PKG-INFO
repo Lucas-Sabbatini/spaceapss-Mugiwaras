@@ -10,12 +10,23 @@ Requires-Dist: fastapi>=0.109.0
 Requires-Dist: uvicorn[standard]>=0.27.0
 Requires-Dist: pydantic>=2.5.0
 Requires-Dist: pydantic-settings>=2.1.0
+Requires-Dist: aiohttp>=3.9.5
+Requires-Dist: httpx>=0.26.0
+Requires-Dist: beautifulsoup4>=4.12.3
+Requires-Dist: lxml[html_clean]>=5.3.0
+Requires-Dist: readability-lxml>=0.8.1
+Requires-Dist: pdfminer.six>=20240706
+Requires-Dist: azure-functions>=1.21.3
+Requires-Dist: azure-cosmos>=4.5.0
 Requires-Dist: redis>=5.0.0
+Requires-Dist: pymongo>=4.6.0
+Requires-Dist: motor>=3.3.0
+Requires-Dist: chromadb>=0.4.0
 Requires-Dist: google-generativeai>=0.3.0
-Requires-Dist: python-dotenv>=1.0.0
 Requires-Dist: numpy>=1.26.0
 Requires-Dist: scikit-learn>=1.4.0
-Requires-Dist: httpx>=0.26.0
+Requires-Dist: python-dotenv>=1.0.0
+Requires-Dist: pandas>=1.26.0
 Provides-Extra: dev
 Requires-Dist: pytest>=7.4.0; extra == "dev"
 Requires-Dist: pytest-asyncio>=0.23.0; extra == "dev"
@@ -94,13 +105,10 @@ source .venv/bin/activate  # Linux/macOS
 ### 2. Instalar Dependências
 
 ```bash
-# Instalar dependências básicas
-pip install -r ../requirements.txt
-
-# Instalar o projeto em modo desenvolvimento
+# Instalar o projeto com todas as dependências
 pip install -e .
 
-# Instalar dependências de desenvolvimento (opcional)
+# OU instalar com dependências de desenvolvimento
 pip install -e ".[dev]"
 ```
 

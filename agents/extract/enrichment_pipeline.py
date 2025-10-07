@@ -12,7 +12,7 @@ import asyncio
 import re
 import xml.etree.ElementTree as ET
 from typing import Dict, List, Optional, Any
-from dataclasses import dataclass, asdict
+from dataclasses import asdict
 from datetime import datetime
 import json
 
@@ -20,74 +20,20 @@ import aiohttp
 import google.generativeai as genai
 from pymongo import MongoClient
 
+# Importar modelos
+from .models import ArticleMetadata
 
-@dataclass
-class ArticleMetadata:
-    """Estrutura de dados para metadados de artigo."""
-    experiment_id: str
-    doi: Optional[str] = None
-    title: Optional[str] = None
-    abstract: Optional[str] = None
-    summary_en: Optional[str] = None  # Resumo em inglês
-    year: Optional[int] = None
-    authors: List[str] = None
-    institutions: List[str] = None
-    funding: List[str] = None
-    objectives: List[str] = None
-    hypotheses: List[str] = None
-    organisms: List[str] = None
-    conditions: List[str] = None
-    methods: List[str] = None
-    parameters_measured: List[str] = None
-    results_summary: Optional[str] = None
-    significant_findings: List[str] = None
-    implications: List[str] = None
-    limitations: List[str] = None
-    future_directions: List[str] = None
-    duration: Optional[str] = None
-    sample_size: Optional[int] = None
-    conditions_control: List[str] = None
-    related_projects: List[str] = None
-    citations: Optional[int] = None
-    full_text: Optional[str] = None
-    mesh_terms: List[str] = None
-    journal: Optional[str] = None
-    pmid: Optional[str] = None
-    
-    def __post_init__(self):
-        """Inicializa listas vazias se None."""
-        if self.authors is None:
-            self.authors = []
-        if self.institutions is None:
-            self.institutions = []
-        if self.funding is None:
-            self.funding = []
-        if self.objectives is None:
-            self.objectives = []
-        if self.hypotheses is None:
-            self.hypotheses = []
-        if self.organisms is None:
-            self.organisms = []
-        if self.conditions is None:
-            self.conditions = []
-        if self.methods is None:
-            self.methods = []
-        if self.parameters_measured is None:
-            self.parameters_measured = []
-        if self.significant_findings is None:
-            self.significant_findings = []
-        if self.implications is None:
-            self.implications = []
-        if self.limitations is None:
-            self.limitations = []
-        if self.future_directions is None:
-            self.future_directions = []
-        if self.conditions_control is None:
-            self.conditions_control = []
-        if self.related_projects is None:
-            self.related_projects = []
-        if self.mesh_terms is None:
-            self.mesh_terms = []
+# Importar MongoDataManager
+import sys
+from pathlib import Path
+
+# Adicionar o caminho do diretório agents ao sys.path
+agents_path = Path(__file__).parent.parent
+if str(agents_path) not in sys.path:
+    sys.path.insert(0, str(agents_path))
+
+# Import absoluto do MongoDataManager
+from packages.api.app.services.mongo_data import MongoDataManager
 
 
 class NCBIAPIClient:
@@ -116,6 +62,36 @@ class NCBIAPIClient:
         """Context manager exit."""
         if self.session:
             await self.session.close()
+    
+    async def _retry_request(self, url: str, params: dict, max_retries: int = 3) -> Optional[Any]:
+        """
+        Faz requisição com retry e backoff exponencial.
+        
+        Args:
+            url: URL da API
+            params: Parâmetros da requisição
+            max_retries: Número máximo de tentativas
+            
+        Returns:
+            Response ou None se falhar
+        """
+        for attempt in range(max_retries):
+            try:
+                async with self.session.get(url, params=params) as response:
+                    if response.status == 200:
+                        return response
+                    elif response.status == 429:  # Too Many Requests
+                        wait_time = (2 ** attempt) * 0.5  # Backoff exponencial
+                        print(f"   ⚠ Rate limit atingido, aguardando {wait_time}s...")
+                        await asyncio.sleep(wait_time)
+                    else:
+                        print(f"   ⚠ Erro HTTP {response.status}, tentativa {attempt + 1}/{max_retries}")
+                        await asyncio.sleep(0.1)
+            except Exception as e:
+                print(f"   ⚠ Erro na requisição: {e}, tentativa {attempt + 1}/{max_retries}")
+                await asyncio.sleep(0.1)
+        
+        return None
     
     @staticmethod
     def extract_pmcid(url_or_id: str) -> str:
@@ -186,18 +162,31 @@ class NCBIAPIClient:
             'metadataPrefix': 'pmc'
         }
         
-        async with self.session.get(self.BASE_OAI, params=params) as response:
-            if response.status != 200:
-                print(f"[AVISO] OAI-PMH falhou para PMC{pmcid}: {response.status}")
-                return None
-            
-            xml_content = await response.text()
-            
-            # Verificar se há erro no XML
-            if 'error' in xml_content.lower() or 'norecordsmatch' in xml_content.lower():
-                return None
-            
-            return xml_content
+        try:
+            async with self.session.get(self.BASE_OAI, params=params, timeout=30) as response:
+                if response.status != 200:
+                    print(f"   ⚠ OAI-PMH retornou status {response.status} para PMC{pmcid}")
+                    return None
+                
+                xml_content = await response.text()
+                
+                # Verificar se há erro no XML
+                if 'error' in xml_content.lower() or 'norecordsmatch' in xml_content.lower():
+                    print(f"   ⚠ Texto completo não disponível para PMC{pmcid}")
+                    return None
+                
+                # Verificar se tem conteúdo substancial
+                if len(xml_content) < 100:
+                    print(f"   ⚠ Resposta muito curta para PMC{pmcid}")
+                    return None
+                
+                return xml_content
+        except asyncio.TimeoutError:
+            print(f"   ⚠ Timeout ao buscar texto completo de PMC{pmcid}")
+            return None
+        except Exception as e:
+            print(f"   ⚠ Erro ao buscar texto completo de PMC{pmcid}: {e}")
+            return None
     
     async def fetch_front_matter(self, pmcid: str) -> Optional[str]:
         """
@@ -467,13 +456,6 @@ class JAATSParser:
             data['authors'] = authors
             data['institutions'] = list(institutions)
             
-            # Texto completo (concatenação de todas as seções)
-            full_text_parts = []
-            for section in ['abstract', 'introduction', 'methods', 'results', 'discussion']:
-                if section in data:
-                    full_text_parts.append(data[section])
-            data['full_text'] = '\n\n'.join(full_text_parts)
-            
             return data
             
         except ET.ParseError as e:
@@ -617,98 +599,15 @@ IMPORTANT:
             return {}
 
 
-class DatabaseManager:
-    """Gerenciador de banco de dados MongoDB."""
-    
-    def __init__(self, connection_string: str = "mongodb://localhost:27017/", 
-                 database: str = "spaceapss", 
-                 collection: str = "experiments"):
-        """
-        Inicializa conexão com MongoDB.
-        
-        Args:
-            connection_string: String de conexão MongoDB
-            database: Nome do database
-            collection: Nome da collection
-        """
-        self.client = MongoClient(connection_string)
-        self.db = self.client[database]
-        self.collection = self.db[collection]
-        
-        # Criar índice único no experiment_id
-        self.collection.create_index("experiment_id", unique=True)
-    
-    def save_article(self, article: ArticleMetadata) -> bool:
-        """
-        Salva artigo no banco de dados.
-        
-        Args:
-            article: Objeto ArticleMetadata
-            
-        Returns:
-            True se sucesso, False se já existe
-        """
-        try:
-            document = asdict(article)
-            document['updated_at'] = datetime.utcnow()
-            
-            # Verificar se já existe
-            existing = self.collection.find_one({'experiment_id': article.experiment_id})
-            
-            if existing:
-                # Atualizar preservando created_at
-                document['created_at'] = existing.get('created_at', datetime.utcnow())
-                self.collection.replace_one(
-                    {'experiment_id': article.experiment_id},
-                    document
-                )
-                print(f"✓ Artigo {article.experiment_id} atualizado no banco de dados")
-            else:
-                # Criar novo
-                document['created_at'] = datetime.utcnow()
-                self.collection.insert_one(document)
-                print(f"✓ Artigo {article.experiment_id} salvo no banco de dados")
-            
-            return True
-            
-        except Exception as e:
-            print(f"[ERRO] Falha ao salvar artigo {article.experiment_id}: {e}")
-            return False
-    
-    def update_article(self, experiment_id: str, updates: Dict[str, Any]) -> bool:
-        """
-        Atualiza artigo existente.
-        
-        Args:
-            experiment_id: ID do experimento
-            updates: Dicionário com campos a atualizar
-            
-        Returns:
-            True se sucesso
-        """
-        updates['updated_at'] = datetime.utcnow()
-        result = self.collection.update_one(
-            {'experiment_id': experiment_id},
-            {'$set': updates}
-        )
-        return result.modified_count > 0
-    
-    def get_article(self, experiment_id: str) -> Optional[Dict]:
-        """Busca artigo por ID."""
-        return self.collection.find_one({'experiment_id': experiment_id})
-    
-    def count_articles(self) -> int:
-        """Retorna total de artigos no banco."""
-        return self.collection.count_documents({})
-
-
 class EnrichmentPipeline:
     """Pipeline completo de enriquecimento de artigos."""
     
     def __init__(self, 
                  google_api_key: str,
                  ncbi_email: str = "your_email@example.com",
-                 mongodb_uri: str = "mongodb://localhost:27017/"):
+                 mongodb_uri: str = "mongodb://localhost:27017/",
+                 mongodb_database: str = "spaceapss",
+                 mongodb_collection: str = "articles"):
         """
         Inicializa pipeline.
         
@@ -716,13 +615,20 @@ class EnrichmentPipeline:
             google_api_key: Chave API Google Gemini
             ncbi_email: Email para NCBI API
             mongodb_uri: URI de conexão MongoDB
+            mongodb_database: Nome do database MongoDB
+            mongodb_collection: Nome da collection MongoDB
         """
         self.google_api_key = google_api_key
         self.ncbi_email = ncbi_email
         self.mongodb_uri = mongodb_uri
         
         self.nlp_extractor = NLPExtractor(google_api_key)
-        self.db_manager = DatabaseManager(mongodb_uri)
+        # Usar MongoDataManager ao invés de DatabaseManager
+        self.db_manager = MongoDataManager(
+            endpoint=mongodb_uri,
+            database_name=mongodb_database,
+            container_name=mongodb_collection
+        )
     
     async def process_article(self, pmc_url_or_id: str) -> Optional[ArticleMetadata]:
         """
@@ -745,6 +651,9 @@ class EnrichmentPipeline:
                 # 2. Buscar metadados via ESummary
                 print("→ Buscando metadados via ESummary...")
                 metadata = await ncbi_client.fetch_metadata(pmcid)
+                
+                # Delay para respeitar rate limit da API
+                await asyncio.sleep(0.1)
                 
                 # Criar objeto ArticleMetadata
                 article = ArticleMetadata(experiment_id=f"PMC{pmcid}")
@@ -775,9 +684,15 @@ class EnrichmentPipeline:
                 print("→ Buscando texto completo via OAI-PMH...")
                 xml_content = await ncbi_client.fetch_fulltext_xml(pmcid)
                 
+                # Delay para respeitar rate limit da API
+                await asyncio.sleep(0.1)
+                
                 # 3.1. Buscar front matter para autores/afiliações
                 print("→ Buscando front matter (autores/afiliações)...")
                 front_matter_xml = await ncbi_client.fetch_front_matter(pmcid)
+                
+                # Delay para respeitar rate limit da API
+                await asyncio.sleep(0.1)
                 
                 if front_matter_xml:
                     front_data = JAATSParser.parse_front_matter(front_matter_xml)
@@ -798,21 +713,23 @@ class EnrichmentPipeline:
                         article.authors = jats_data['authors']
                     if not article.institutions and 'institutions' in jats_data:
                         article.institutions = jats_data['institutions']
-                    if 'full_text' in jats_data:
-                        article.full_text = jats_data['full_text']
                 
                 # 4. Buscar detalhes adicionais do PubMed (se tiver PMID)
                 if article.pmid:
                     print(f"→ Buscando detalhes do PubMed (PMID: {article.pmid})...")
+                    
+                    # Delay antes de buscar no PubMed
+                    await asyncio.sleep(0.1)
+                    
                     pubmed_data = await ncbi_client.fetch_pubmed_details(article.pmid)
                     if pubmed_data:
                         article.mesh_terms = pubmed_data.get('mesh_terms', [])
                         article.funding.extend(pubmed_data.get('funding', []))
                 
                 # 5. Extração NLP com LLM
-                if article.full_text or article.abstract:
+                if article.abstract:
                     print("→ Extraindo informações estruturadas com LLM...")
-                    content_for_nlp = article.full_text or article.abstract
+                    content_for_nlp = article.abstract
                     
                     nlp_data = self.nlp_extractor.extract_structured_info(
                         content_for_nlp, 
@@ -840,11 +757,15 @@ class EnrichmentPipeline:
                     else:
                         print("   [AVISO] Nenhum dado extraído pelo LLM!")
                 else:
-                    print("   [AVISO] Sem texto para extração NLP (sem full_text nem abstract)")
+                    print("   [AVISO] Sem texto para extração NLP")
                 
-                # 6. Salvar no banco de dados
-                print("→ Salvando no banco de dados...")
-                self.db_manager.save_article(article)
+                # 6. Salvar no banco de dados com embedding
+                print("→ Salvando no banco de dados com embedding...")
+                try:
+                    self.db_manager.add_document(article)
+                    print(f"✓ Artigo {article.experiment_id} salvo no banco de dados com embedding")
+                except Exception as e:
+                    print(f"[ERRO] Falha ao salvar artigo {article.experiment_id}: {e}")
                 
                 print(f"✓ Processamento concluído para PMC{pmcid}")
                 return article
@@ -855,13 +776,13 @@ class EnrichmentPipeline:
                 traceback.print_exc()
                 return None
     
-    async def process_batch(self, pmc_list: List[str], delay: float = 0.5):
+    async def process_batch(self, pmc_list: List[str], delay: float = 1.0):
         """
         Processa lista de artigos em batch.
         
         Args:
             pmc_list: Lista de URLs ou PMCIDs
-            delay: Delay entre requisições (segundos)
+            delay: Delay entre processamento de artigos (segundos) - padrão 1.0s
         """
         total = len(pmc_list)
         
@@ -885,7 +806,7 @@ class EnrichmentPipeline:
         print(f"\n{'#'*60}")
         print(f"PROCESSAMENTO CONCLUÍDO")
         print(f"Total: {total} | Sucesso: {successful} | Falha: {failed}")
-        print(f"Artigos no banco: {self.db_manager.count_articles()}")
+        print(f"Artigos no banco: {self.db_manager.get_total_documents()}")
         print(f"{'#'*60}\n")
 
 

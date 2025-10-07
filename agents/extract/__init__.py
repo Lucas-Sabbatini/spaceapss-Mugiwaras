@@ -1,8 +1,20 @@
+"""
+Módulo de extração e processamento de artigos científicos.
+
+Exporta:
+- ArticleMetadata: Modelo de dados para artigos
+- Funções de extração e processamento
+"""
+
 import logging
 import json
 import azure.functions as func
 from . import extractor
 from extract.sectionizer import sectionize_text
+
+from .models import ArticleMetadata
+
+__all__ = ['ArticleMetadata', 'extractor', 'sectionize_text']
 
 # HTTP Trigger: GET /api/extract?url=...
 async def main(req: func.HttpRequest) -> func.HttpResponse:

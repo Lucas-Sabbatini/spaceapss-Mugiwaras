@@ -14,11 +14,6 @@ class Settings(BaseSettings):
     google_embed_model: str = "models/text-embedding-004"
     google_chat_model: str = "gemini-2.0-flash"
 
-    # Redis
-    redis_url: str = "redis://localhost:6379"
-    redis_username: str = ""
-    redis_password: str = ""
-
     # MongoDB
     mongodb_uri: str = "mongodb://localhost:27017/"
     mongodb_database: str = "spaceapss"

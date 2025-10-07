@@ -41,7 +41,6 @@ class ArticleDetail(BaseModel):
     conditions_control: List[str] = Field(default_factory=list, description="Grupos controle")
     related_projects: List[str] = Field(default_factory=list, description="Projetos relacionados")
     citations: Optional[int] = Field(None, description="Número de citações")
-    full_text: Optional[str] = Field(None, description="Texto completo")
     mesh_terms: List[str] = Field(default_factory=list, description="Termos MeSH")
     journal: Optional[str] = Field(None, description="Nome do journal")
     pmid: Optional[str] = Field(None, description="PubMed ID")

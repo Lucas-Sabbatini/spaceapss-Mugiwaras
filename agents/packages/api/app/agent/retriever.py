@@ -1,46 +1,51 @@
-"""Retriever usando CosmosDataManager."""
+"""Retriever usando MongoDataManager."""
 
+import sys
 from pathlib import Path
 from typing import List, Dict, Any
 
-from packages.api.app.services.cosmos_data import CosmosDataManager
+# Adicionar agents ao sys.path para importar extract.models
+agents_path = Path(__file__).parent.parent.parent.parent.parent
+if str(agents_path) not in sys.path:
+    sys.path.insert(0, str(agents_path))
+
+from packages.api.app.services.mongo_data import MongoDataManager
+from extract.models import ArticleMetadata
 from packages.api.app.services.logger import get_logger, log_error, log_info
 
 logger = get_logger(__name__)
 
 
 class Retriever:
-    """Retriever simples usando CosmosDataManager."""
+    """Retriever usando MongoDataManager com ArticleMetadata."""
 
     def __init__(self):
         """Inicializa retriever."""
         try:
-            self.db_manager = CosmosDataManager()
-            log_info(logger, "Retriever inicializado com CosmosDataManager")
+            self.db_manager = MongoDataManager()
+            log_info(logger, "Retriever inicializado com MongoDataManager")
         except Exception as e:
-            log_error(logger, "Erro ao inicializar CosmosDataManager", e)
+            log_error(logger, "Erro ao inicializar MongoDataManager", e)
             self.db_manager = None
 
-    def retrieve(self, question: str, top_k: int = 5) -> List[str]:
+    def retrieve(self, question: str, top_k: int = 5) -> List[ArticleMetadata]:
         """
-        Recupera documentos relevantes usando CosmosDataManager.
+        Recupera documentos relevantes usando MongoDataManager.
         
         Args:
             question: Pergunta do usuário
             top_k: Número de documentos a retornar
             
         Returns:
-            Lista de strings relacionadas à pergunta
+            Lista de ArticleMetadata ordenados por relevância semântica
         """
         if self.db_manager is None:
-            log_error(logger, "CosmosDataManager não inicializado", Exception())
+            log_error(logger, "MongoDataManager não inicializado", Exception())
             return []
 
         try:
             results = self.db_manager.query(query_text=question, n_results=top_k)
-            with open("retrieved_results.txt", "w", encoding="utf-8") as f:
-                for item in results:
-                    f.write(item + "\n")
+            
             log_info(
                 logger,
                 "Retrieval concluído",
@@ -52,37 +57,6 @@ class Retriever:
 
         except Exception as e:
             log_error(logger, "Erro no retrieval", e)
-            return []
-    
-    def retrieve_with_metadata(self, question: str, top_k: int = 5) -> List[Dict[str, Any]]:
-        """
-        Recupera documentos relevantes com metadados estruturados.
-        
-        Args:
-            question: Pergunta do usuário
-            top_k: Número de documentos a retornar
-            
-        Returns:
-            Lista de dicionários com dados estruturados dos documentos
-        """
-        if self.db_manager is None:
-            log_error(logger, "CosmosDataManager não inicializado", Exception())
-            return []
-
-        try:
-            results = self.db_manager.query_with_metadata(query_text=question, n_results=top_k)
-            
-            log_info(
-                logger,
-                "Retrieval com metadata concluído",
-                question_len=len(question),
-                results=len(results),
-            )
-            
-            return results
-
-        except Exception as e:
-            log_error(logger, "Erro no retrieval com metadata", e)
             return []
 
 
