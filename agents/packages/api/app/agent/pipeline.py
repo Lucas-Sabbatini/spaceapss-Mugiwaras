@@ -1,15 +1,8 @@
 """Pipeline principal do agente."""
 
-import sys
-from pathlib import Path
 from typing import List
 
 import google.generativeai as genai
-
-# Adicionar agents ao sys.path para importar extract.models
-agents_path = Path(__file__).parent.parent.parent.parent.parent
-if str(agents_path) not in sys.path:
-    sys.path.insert(0, str(agents_path))
 
 from packages.api.app.agent.prompts import build_fallback_prompt, build_synthesis_prompt
 from packages.api.app.agent.retriever import get_retriever

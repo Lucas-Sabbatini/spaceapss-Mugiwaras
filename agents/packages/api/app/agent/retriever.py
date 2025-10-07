@@ -1,13 +1,7 @@
 """Retriever usando MongoDataManager."""
 
-import sys
 from pathlib import Path
 from typing import List, Dict, Any
-
-# Adicionar agents ao sys.path para importar extract.models
-agents_path = Path(__file__).parent.parent.parent.parent.parent
-if str(agents_path) not in sys.path:
-    sys.path.insert(0, str(agents_path))
 
 from packages.api.app.services.mongo_data import MongoDataManager
 from extract.models import ArticleMetadata

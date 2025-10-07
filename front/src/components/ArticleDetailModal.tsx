@@ -190,7 +190,7 @@ export function ArticleDetailModal({ article, isOpen, onClose, isLoading, error 
                     {article.sample_size && (
                       <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                         <div className="text-2xl font-bold text-green-700">{article.sample_size}</div>
-                        <div className="text-xs text-green-600">Tamanho da Amostra</div>
+                        <div className="text-xs text-green-600">Samples size</div>
                       </div>
                     )}
                     {article.duration && (
