@@ -1,18 +1,116 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { Network } from 'vis-network';
-import type { GraphData } from '../types';
+import type { DataSet } from 'vis-data';
+import type { GraphData, GraphNode, GraphEdge } from '../types';
 
 interface GraphVisualizationProps {
   data: GraphData;
   onNodeClick?: (nodeId: string) => void;
 }
 
-export function GraphVisualization({ data, onNodeClick }: GraphVisualizationProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const networkRef = useRef<Network | null>(null);
+export interface GraphVisualizationRef {
+  addNodes: (nodes: GraphNode[]) => void;
+  addEdges: (edges: GraphEdge[]) => void;
+  hasNode: (nodeId: string) => boolean;
+}
+
+export const GraphVisualization = forwardRef<GraphVisualizationRef, GraphVisualizationProps>(
+  ({ data, onNodeClick }, ref) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const networkRef = useRef<Network | null>(null);
+    const nodesDataSetRef = useRef<DataSet<any> | null>(null);
+    const edgesDataSetRef = useRef<DataSet<any> | null>(null);
+    const initializedRef = useRef(false);
+
+    // Expor métodos para o componente pai
+    useImperativeHandle(ref, () => ({
+      addNodes: (newNodes: GraphNode[]) => {
+        if (!nodesDataSetRef.current) {
+          return;
+        }
+        
+        const groupColors: Record<string, string> = {
+          author: '#3b82f6',
+          institution: '#10b981',
+          organism: '#f59e0b',
+          journal: '#8b5cf6',
+        };
+
+        const formattedNodes = newNodes
+          .filter(node => {
+            try {
+              const exists = nodesDataSetRef.current?.get(node.id);
+              if (exists) {
+              }
+              return !exists;
+            } catch {
+              return true;
+            }
+          })
+          .map(node => ({
+            id: node.id,
+            label: undefined,
+            value: node.value,
+            color: {
+              background: groupColors[node.group] || '#6b7280',
+              border: groupColors[node.group] || '#4b5563',
+              highlight: {
+                background: groupColors[node.group] || '#6b7280',
+                border: '#1f2937',
+              },
+            },
+          }));
+
+        if (formattedNodes.length > 0) {
+          nodesDataSetRef.current.add(formattedNodes);
+        }
+      },
+      addEdges: (newEdges: GraphEdge[]) => {
+        if (!edgesDataSetRef.current) {
+          return;
+        }
+
+        const formattedEdges = newEdges
+          .filter(edge => {
+            try {
+              const edgeId = `${edge.from}-${edge.to}`;
+              const exists = edgesDataSetRef.current?.get(edgeId);
+              if (exists) {
+              }
+              return !exists;
+            } catch {
+              return true;
+            }
+          })
+          .map(edge => ({
+            id: `${edge.from}-${edge.to}`,
+            from: edge.from,
+            to: edge.to,
+            value: edge.value,
+            color: {
+              color: '#9ca3af',
+              highlight: '#3b82f6',
+            },
+            width: Math.max(1, edge.value / 2),
+          }));
+
+        if (formattedEdges.length > 0) {
+          edgesDataSetRef.current.add(formattedEdges);
+        }
+      },
+      hasNode: (nodeId: string) => {
+        try {
+          return nodesDataSetRef.current?.get(nodeId) !== null;
+        } catch {
+          return false;
+        }
+      },
+    }), []);
 
   useEffect(() => {
-    if (!containerRef.current || !data) return;
+    if (!containerRef.current || !data || initializedRef.current) return;
+
+    initializedRef.current = true;
 
     // Define cores para cada grupo
     const groupColors: Record<string, string> = {
@@ -38,6 +136,7 @@ export function GraphVisualization({ data, onNodeClick }: GraphVisualizationProp
     }));
 
     const edges = data.edges.map(edge => ({
+      id: `${edge.from}-${edge.to}`,
       from: edge.from,
       to: edge.to,
       value: edge.value,
@@ -118,21 +217,20 @@ export function GraphVisualization({ data, onNodeClick }: GraphVisualizationProp
       width: '100%',
     };
 
-    // Criar ou atualizar a rede
-    if (networkRef.current) {
-      networkRef.current.setData({ nodes, edges });
-      networkRef.current.fit({
-        animation: {
-          duration: 1000,
-          easingFunction: 'easeInOutQuad',
-        },
-      });
-    } else {
+    // Importar DataSet e criar network
+    import('vis-data').then(({ DataSet }) => {
+      nodesDataSetRef.current = new DataSet(nodes);
+      edgesDataSetRef.current = new DataSet(edges);
+
       networkRef.current = new Network(
-        containerRef.current,
-        { nodes, edges },
+        containerRef.current!,
+        {
+          nodes: nodesDataSetRef.current,
+          edges: edgesDataSetRef.current,
+        },
         options
       );
+
 
       // Adicionar evento de clique nos nós
       if (onNodeClick) {
@@ -153,16 +251,20 @@ export function GraphVisualization({ data, onNodeClick }: GraphVisualizationProp
           },
         });
       });
-    }
+    });
+  }, [data, onNodeClick]);
 
-    // Cleanup
+  // useEffect separado para cleanup final
+  useEffect(() => {
     return () => {
       if (networkRef.current) {
         networkRef.current.destroy();
         networkRef.current = null;
+        nodesDataSetRef.current = null;
+        edgesDataSetRef.current = null;
       }
     };
-  }, [data]);
+  }, []);
 
   return (
     <div className="w-full" style={{ height: '600px' }}>
@@ -172,4 +274,6 @@ export function GraphVisualization({ data, onNodeClick }: GraphVisualizationProp
       />
     </div>
   );
-}
+});
+
+GraphVisualization.displayName = 'GraphVisualization';

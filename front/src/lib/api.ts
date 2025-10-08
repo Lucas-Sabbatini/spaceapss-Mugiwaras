@@ -1,4 +1,4 @@
-import type { ChatRequest, ChatResponse, ArticleDetail, GraphData, NodeDetails, GraphStats } from '../types';
+import type { ChatRequest, ChatResponse, ArticleDetail, GraphData, NodeDetails, GraphStats, GraphNode, GraphEdge } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -152,6 +152,61 @@ export async function getGraphStats(): Promise<GraphStats> {
 
     return await response.json();
   } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new Error('Erro de conexão com o servidor. Verifique se o backend está rodando.');
+  }
+}
+
+export interface NeighborsSubgraph {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  center_node: string;
+  depth: number;
+  stats: {
+    total_nodes: number;
+    total_edges: number;
+  };
+}
+
+export async function getNodeNeighbors(
+  nodeId: string,
+  maxDepth: number = 1,
+  noExperimentId?: string
+): Promise<NeighborsSubgraph> {
+  try {
+    const params = new URLSearchParams({
+      max_depth: maxDepth.toString(),
+    });
+    
+    if (noExperimentId) {
+      params.append('no_experiment_id', noExperimentId);
+    }
+    
+    const url = `${API_URL}/api/graph/neighbors/${encodeURIComponent(nodeId)}?${params}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new ApiError(404, `Node ${nodeId} not found`);
+      }
+      throw new ApiError(
+        response.status,
+        `Failed to fetch node neighbors: ${response.statusText}`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('❌ Erro na requisição:', error);
     if (error instanceof ApiError) {
       throw error;
     }

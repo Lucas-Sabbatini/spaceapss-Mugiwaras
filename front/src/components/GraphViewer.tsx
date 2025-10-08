@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { GraphData, NodeDetails } from '../types';
-import { getGraph, getNodeDetails } from '../lib/api';
-import { GraphVisualization } from './GraphVisualization';
+import { getGraph, getNodeDetails, getNodeNeighbors } from '../lib/api';
+import { GraphVisualization, GraphVisualizationRef } from './GraphVisualization';
 
 interface GraphViewerProps {
   experimentId: string;
@@ -16,6 +16,14 @@ export function GraphViewer({ experimentId }: GraphViewerProps) {
   const [isNodeModalOpen, setIsNodeModalOpen] = useState(false);
   const [isLoadingNode, setIsLoadingNode] = useState(false);
   const [nodeError, setNodeError] = useState<string | null>(null);
+
+  // Estado para o modal de confirmação de expansão
+  const [showExpandModal, setShowExpandModal] = useState(false);
+  const [nodeToExpand, setNodeToExpand] = useState<string | null>(null);
+  const [isExpanding, setIsExpanding] = useState(false);
+  
+  // Ref para o componente de visualização
+  const graphVisualizationRef = useRef<GraphVisualizationRef>(null);
 
   useEffect(() => {
     const fetchGraph = async () => {
@@ -39,6 +47,11 @@ export function GraphViewer({ experimentId }: GraphViewerProps) {
   }, [experimentId]);
 
   const handleNodeClick = async (nodeId: string) => {
+    // Mostrar modal de confirmação para expandir
+    setNodeToExpand(nodeId);
+    setShowExpandModal(true);
+    
+    // Também carregar os detalhes do nó
     setIsNodeModalOpen(true);
     setIsLoadingNode(true);
     setNodeError(null);
@@ -53,6 +66,56 @@ export function GraphViewer({ experimentId }: GraphViewerProps) {
     } finally {
       setIsLoadingNode(false);
     }
+  };
+
+  const handleExpandNode = async () => {
+    if (!nodeToExpand) return;
+    setIsExpanding(true);
+
+    try {
+      // Buscar vizinhos excluindo nós do experimento atual
+      const neighborsData = await getNodeNeighbors(nodeToExpand, 1, experimentId);
+    
+      // Adicionar novos nós e arestas ao grafo
+      if (graphVisualizationRef.current) {
+        graphVisualizationRef.current.addNodes(neighborsData.nodes);
+        
+        graphVisualizationRef.current.addEdges(neighborsData.edges);
+        
+        // IMPORTANTE: Criar arestas entre o nó expandido e todos os seus vizinhos
+        // Isso garante que as conexões sejam visíveis mesmo quando os vizinhos
+        // vêm de experimentos diferentes
+        const centerNodeId = neighborsData.center_node;
+        const additionalEdges = neighborsData.nodes
+          .filter(node => node.id !== centerNodeId) // Excluir o próprio nó central
+          .map(node => ({
+            from: centerNodeId,
+            to: node.id,
+            value: 1.0, // Peso padrão
+            title: 'Connection'
+          }));
+        
+        if (additionalEdges.length > 0) {
+          graphVisualizationRef.current.addEdges(additionalEdges);
+        }
+        
+      }
+
+      // Fechar o painel de expansão após sucesso
+      setShowExpandModal(false);
+      setNodeToExpand(null);
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error expanding node';
+      alert(`Failed to expand node: ${errorMessage}`);
+    } finally {
+      setIsExpanding(false);
+    }
+  };
+
+  const handleCancelExpand = () => {
+    setShowExpandModal(false);
+    setNodeToExpand(null);
   };
 
   const handleCloseNodeModal = () => {
@@ -114,13 +177,17 @@ export function GraphViewer({ experimentId }: GraphViewerProps) {
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">🕸️ Knowledge Graph</h3>
             <p className="text-sm text-gray-600 mb-4">
-              💡 Click on any node to see details about authors, institutions, organisms, or journals
+              💡 Click on any node to see details and expand connections
             </p>
-            <GraphVisualization data={graphData} onNodeClick={handleNodeClick} />
+            <GraphVisualization 
+              ref={graphVisualizationRef}
+              data={graphData} 
+              onNodeClick={handleNodeClick} 
+            />
           </div>
         </div>
 
-        {/* Painel de Detalhes - ocupa 1/3 do espaço */}
+        {/* Painel de Detalhes e Expansão - ocupa 1/3 do espaço */}
         <div className="lg:col-span-1">
           <div className="bg-white rounded-lg border border-gray-200 p-4 sticky top-4">
             {!isNodeModalOpen ? (
@@ -167,6 +234,45 @@ export function GraphViewer({ experimentId }: GraphViewerProps) {
                     ×
                   </button>
                 </div>
+
+                {/* Expansão de Nós */}
+                {showExpandModal && (
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-4 shadow-sm">
+                    <h4 className="text-sm font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      Expand Node Connections
+                    </h4>
+                    <p className="text-xs text-blue-800 mb-3">
+                      Add neighboring nodes from other experiments to explore connections.
+                    </p>
+                    {isExpanding ? (
+                      <div className="flex items-center justify-center py-3">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-2"></div>
+                        <span className="text-sm text-blue-700 font-medium">Expanding...</span>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleCancelExpand}
+                          className="flex-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleExpandNode}
+                          className="flex-1 px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm flex items-center justify-center gap-1"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
+                          Expand
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Experiments */}
                 {selectedNode.attributes.experiment_ids.length > 0 && (

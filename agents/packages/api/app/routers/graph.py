@@ -162,7 +162,8 @@ async def get_node_details(node_id: str):
 @router.get("/neighbors/{node_id}")
 async def get_node_neighbors(
     node_id: str,
-    max_depth: int = Query(1, description="Profundidade da vizinhança (1 = vizinhos diretos)", ge=1, le=3)
+    max_depth: int = Query(1, description="Profundidade da vizinhança (1 = vizinhos diretos)", ge=1, le=3),
+    no_experiment_id: Optional[str] = Query(None, description="Excluir nós que contêm este experiment_id")
 ):
     """
     Retorna subgrafo de vizinhos de um nó.
@@ -172,10 +173,11 @@ async def get_node_neighbors(
     - **max_depth=1**: Vizinhos diretos
     - **max_depth=2**: Vizinhos + vizinhos dos vizinhos
     - **max_depth=3**: Até 3 níveis de distância
+    - **no_experiment_id**: Exclui nós que contêm o experiment_id especificado
     """
     try:
         service = GraphService()
-        subgraph = service.get_neighbors_subgraph(node_id, max_depth)
+        subgraph = service.get_neighbors_subgraph(node_id, max_depth, no_experiment_id)
         
         return subgraph
         

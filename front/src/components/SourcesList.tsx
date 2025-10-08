@@ -20,11 +20,6 @@ export function SourcesList({ sources, onSourceClick }: SourcesListProps) {
             {source.year && (
               <span className="text-xs text-blue-600">({source.year})</span>
             )}
-            {source.score !== undefined && (
-              <span className="text-xs bg-blue-200 px-1.5 py-0.5 rounded">
-                {(source.score * 100).toFixed(0)}%
-              </span>
-            )}
           </button>
         ))}
       </div>

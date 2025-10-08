@@ -385,13 +385,14 @@ class GraphService:
             'neighbors': neighbors[:20]  # Limitar a 20 vizinhos na resposta
         }
     
-    def get_neighbors_subgraph(self, node_id: str, max_depth: int = 1) -> dict:
+    def get_neighbors_subgraph(self, node_id: str, max_depth: int = 1, no_experiment_id: Optional[str] = None) -> dict:
         """
         Retorna subgrafo de vizinhos no formato vis.js.
         
         Args:
             node_id: ID do nó central
             max_depth: Profundidade da busca (1 = vizinhos diretos)
+            no_experiment_id: Excluir nós que contêm este experiment_id
             
         Returns:
             Dicionário com nodes, edges e stats no formato vis.js
@@ -412,6 +413,23 @@ class GraphService:
                 next_level.update(neighbors)
             nodes_to_include.update(next_level)
             current_level = next_level
+        
+        # Aplicar filtro de no_experiment_id
+        if no_experiment_id:
+            filtered_nodes = set()
+            for node in nodes_to_include:
+                node_data = graph.nodes[node]
+                exp_ids = node_data.get('experiment_ids', [])
+                
+                # Converter para lista se for string
+                if isinstance(exp_ids, str):
+                    exp_ids = exp_ids.split(',')
+                
+                # Incluir apenas se NÃO contiver o experiment_id especificado
+                if no_experiment_id not in exp_ids:
+                    filtered_nodes.add(node)
+            
+            nodes_to_include = filtered_nodes
         
         # Criar subgrafo
         subgraph = graph.subgraph(nodes_to_include).copy()
