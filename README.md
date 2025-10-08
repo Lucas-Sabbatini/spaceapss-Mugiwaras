@@ -14,6 +14,8 @@ O projeto permite que usuários façam perguntas em linguagem natural e recebam 
 
 ## Arquitetura do Sistema
 
+![Diagrama do Projeto](./img/Diagrama%20de%20caso%20de%20uso.png)
+
 ### Stack Tecnológico
 
 #### **Backend (agents/)**
@@ -28,113 +30,77 @@ O projeto permite que usuários façam perguntas em linguagem natural e recebam 
 - **Vite** - Build tool e dev server
 - **TailwindCSS** - Estilização
 - **Axios** - Cliente HTTP
+- **Vis.js** - Visualização dos grafos no front.
 
 
 
-## 🔐 Segurança e Configuração
+## Segurança e Configuração
 
 ### Variáveis de Ambiente (`.env`)
 ```bash
-GOOGLE_API_KEY          # Chave Google Gemini
-GOOGLE_EMBED_MODEL      # Modelo de embeddings
-GOOGLE_CHAT_MODEL       # Modelo de chat
-REDIS_URL              # Conexão Redis
-CORS_ORIGINS           # Origens permitidas
-ENV                    # dev/prod
+GOOGLE_API_KEY=
+GOOGLE_EMBED_MODEL=models/text-embedding-004
+GOOGLE_CHAT_MODEL=gemini-2.0-flash
+GCP_PROJECT_ID=
+GCP_REGION=us-central1
+
+MONGODB_URI=
+MONGODB_DATABASE=spaceapss
+MONGODB_COLLECTION=articles
+
+API_PORT=
+ENV=
+CORS_ORIGINS=
+FETCH_TIMEOUT_SECS=
 ```
-
-### CORS
-- Configurado para localhost (desenvolvimento)
-- Deve ser restrito em produção
-
-### Rate Limiting
-- Não implementado (recomendado para produção)
-- Redis pode ser usado para isso
 
 ---
 
-## 🚀 Fluxo de Desenvolvimento
+## Fluxo de Desenvolvimento
 
 ### Setup Inicial
+#### Backend
 ```bash
-# 1. Backend
 cd agents
 python -m venv .venv
-source .venv/bin/activate
-pip install -e .
-python proccess_batch.py  # ~30-60 min
+source .venv/bin/activate  # No Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-# 2. Iniciar API
-uvicorn packages.api.app.main:app --reload --port 8000
+#### Processamento Inicial dos Artigos
+```bash
+# Processar os 608 artigos do CSV (~30-60 min)
+python process_batch.py
 
-# 3. Frontend
-cd ../front
+# Gerar os grafos de conhecimento
+python build_knowledge_graph.py
+```
+
+#### Iniciar API
+```bash
+# A partir do diretório agents/
+uvicorn main:app --reload --port 8000
+```
+
+#### Frontend
+```bash
+cd front
 npm install
 npm run dev
 ```
 
 ### Adicionar Novos Artigos
-```bash
-# 1. Atualizar CSV: shared/SB_publication_PMC.csv
-# 2. Rodar processamento
-python proccess_batch.py
-# 3. Reiniciar API (se necessário)
-```
+
+1. **Atualizar o CSV** em `shared/SB_publication_PMC.csv`
+2. **Executar o processamento:**
+  ```bash
+  cd agents
+  python process_batch.py
+  python create_graph.py
+  ```
+3. **Reiniciar a API** (se estiver rodando)
 
 ---
 
-## 📈 Possíveis Melhorias Futuras
+**Nota:** Certifique-se de que todos os scripts estão no diretório `agents/` e que as variáveis de ambiente estão configuradas corretamente no arquivo `.env` antes de executar os comandos.
 
-### 1. **Performance**
-- [ ] Cache de embeddings de perguntas comuns (Redis)
-- [ ] Indexação mais eficiente (HNSW no ChromaDB)
-- [ ] Reranking com modelo cross-encoder
-
-### 2. **Funcionalidades**
-- [ ] Histórico de conversas persistente
-- [ ] Exportar respostas em PDF/Markdown
-- [ ] Sugestões de perguntas relacionadas
-- [ ] Multi-idioma
-
-### 3. **Qualidade**
-- [ ] Fine-tuning do modelo de embeddings
-- [ ] Avaliação com métricas (BLEU, ROUGE)
-- [ ] A/B testing de prompts
-- [ ] Feedback loop do usuário
-
-### 4. **Infraestrutura**
-- [ ] Containerização (Docker)
-- [ ] CI/CD pipeline
-- [ ] Monitoramento (Prometheus/Grafana)
-- [ ] Rate limiting e autenticação
-
----
-
-## 🎯 Casos de Uso
-
-1. **Pesquisadores**: Busca rápida em literatura científica
-2. **Estudantes**: Entendimento de conceitos de medicina espacial
-3. **Profissionais**: Síntese de múltiplos artigos
-4. **Educação**: Ferramenta de aprendizado interativa
-
----
-
-## 📚 Referências Técnicas
-
-- **RAG Paper**: [Retrieval-Augmented Generation (Lewis et al.)](https://arxiv.org/abs/2005.11401)
-- **ChromaDB**: https://docs.trychroma.com/
-- **Google Gemini**: https://ai.google.dev/docs
-- **FastAPI**: https://fastapi.tiangolo.com/
-- **NCBI API**: https://www.ncbi.nlm.nih.gov/books/NBK25501/
-
----
-
-## 👥 Equipe SpaceAPSS
-
-Desenvolvido como projeto acadêmico/pesquisa em Inteligência Artificial aplicada à literatura científica espacial.
-
-**Licença**: MIT
-
----
-
-**Última atualização**: Outubro 2025
