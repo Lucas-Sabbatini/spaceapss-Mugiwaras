@@ -106,13 +106,30 @@ export interface MostConnectedNode {
   degree: number;
 }
 
+export interface DegreeDistribution {
+  min: number;
+  q1: number;
+  median: number;
+  q3: number;
+  max: number;
+}
+
 export interface GraphStats {
   total_nodes: number;
   total_edges: number;
   node_types: GraphNodeTypes;
   avg_degree: number;
   max_degree: number;
+  min_degree: number;
   most_connected_node: MostConnectedNode;
+  top_connected_nodes: MostConnectedNode[];
+  degree_distribution: DegreeDistribution;
+  density: number;
+  num_components: number;
+  largest_component_size: number;
+  avg_clustering: number;
+  isolated_nodes: number;
+  edge_types: Record<string, number>;
 }
 
 export interface GraphData {

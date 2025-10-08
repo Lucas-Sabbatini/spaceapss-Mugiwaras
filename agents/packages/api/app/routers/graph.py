@@ -12,13 +12,22 @@ router = APIRouter(prefix="/api/graph", tags=["graph"])
 
 
 class GraphStats(BaseModel):
-    """Estatísticas do grafo."""
+    """Estatísticas detalhadas do grafo."""
     total_nodes: int
     total_edges: int
     node_types: dict[str, int]
     avg_degree: float
     max_degree: int
+    min_degree: int
     most_connected_node: Optional[dict] = None
+    top_connected_nodes: list[dict] = Field(default_factory=list, description="Top 10 nós mais conectados")
+    degree_distribution: Optional[dict] = Field(None, description="Quartis da distribuição de graus (min, Q1, median, Q3, max)")
+    density: float = Field(description="Densidade do grafo (0-1, onde 1 = totalmente conectado)")
+    num_components: int = Field(description="Número de componentes conectados")
+    largest_component_size: int = Field(description="Tamanho do maior componente conectado")
+    avg_clustering: float = Field(description="Coeficiente médio de clustering")
+    isolated_nodes: int = Field(description="Quantidade de nós isolados (grau = 0)")
+    edge_types: dict[str, int] = Field(default_factory=dict, description="Contagem de arestas entre tipos de nós")
 
 
 class VisNode(BaseModel):

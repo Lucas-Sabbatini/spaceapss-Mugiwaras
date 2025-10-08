@@ -43,10 +43,10 @@ class GraphService:
     
     def get_stats(self) -> dict:
         """
-        Retorna estatísticas do grafo.
+        Retorna estatísticas completas do grafo.
         
         Returns:
-            Dicionário com estatísticas
+            Dicionário com estatísticas detalhadas
         """
         graph = self.kg.graph
         
@@ -61,6 +61,7 @@ class GraphService:
         degrees = dict(graph.degree())
         avg_degree = sum(degrees.values()) / len(degrees) if degrees else 0
         max_degree = max(degrees.values()) if degrees else 0
+        min_degree = min(degrees.values()) if degrees else 0
         
         # Nó mais conectado
         most_connected_node = None
@@ -74,13 +75,73 @@ class GraphService:
                 'degree': degrees[most_connected_id]
             }
         
+        # Top 10 nós mais conectados
+        top_nodes = []
+        if degrees:
+            sorted_nodes = sorted(degrees.items(), key=lambda x: x[1], reverse=True)[:10]
+            for node_id, degree in sorted_nodes:
+                node_data = graph.nodes[node_id]
+                top_nodes.append({
+                    'id': node_id,
+                    'name': node_data.get('name', node_id),
+                    'type': node_data.get('type', 'unknown'),
+                    'degree': degree
+                })
+        
+        # Distribuição de graus (quartis)
+        degree_distribution = None
+        if degrees:
+            degree_values = sorted(degrees.values())
+            n = len(degree_values)
+            degree_distribution = {
+                'min': min_degree,
+                'q1': degree_values[n // 4] if n > 0 else 0,
+                'median': degree_values[n // 2] if n > 0 else 0,
+                'q3': degree_values[3 * n // 4] if n > 0 else 0,
+                'max': max_degree
+            }
+        
+        # Densidade do grafo (0 a 1, onde 1 = grafo completo)
+        density = nx.density(graph) if graph.number_of_nodes() > 0 else 0
+        
+        # Componentes conectados
+        num_components = nx.number_connected_components(graph)
+        largest_component_size = len(max(nx.connected_components(graph), key=len)) if num_components > 0 else 0
+        
+        # Coeficiente de clustering médio
+        try:
+            avg_clustering = nx.average_clustering(graph)
+        except:
+            avg_clustering = 0
+        
+        # Nós isolados (grau = 0)
+        isolated_nodes = sum(1 for degree in degrees.values() if degree == 0)
+        
+        # Estatísticas de arestas entre tipos
+        edge_types = {}
+        for edge in graph.edges():
+            type1 = graph.nodes[edge[0]].get('type', 'unknown')
+            type2 = graph.nodes[edge[1]].get('type', 'unknown')
+            # Ordenar para evitar duplicatas (author-institution = institution-author)
+            edge_type = '-'.join(sorted([type1, type2]))
+            edge_types[edge_type] = edge_types.get(edge_type, 0) + 1
+        
         return {
             'total_nodes': graph.number_of_nodes(),
             'total_edges': graph.number_of_edges(),
             'node_types': node_types,
             'avg_degree': round(avg_degree, 2),
             'max_degree': max_degree,
-            'most_connected_node': most_connected_node
+            'min_degree': min_degree,
+            'most_connected_node': most_connected_node,
+            'top_connected_nodes': top_nodes,
+            'degree_distribution': degree_distribution,
+            'density': round(density, 4),
+            'num_components': num_components,
+            'largest_component_size': largest_component_size,
+            'avg_clustering': round(avg_clustering, 4),
+            'isolated_nodes': isolated_nodes,
+            'edge_types': edge_types
         }
     
     def _node_to_vis(self, node_id: str, graph: nx.Graph) -> dict:
@@ -206,6 +267,59 @@ class GraphService:
         degrees = dict(subgraph.degree())
         avg_degree = sum(degrees.values()) / len(degrees) if degrees else 0
         max_degree = max(degrees.values()) if degrees else 0
+        min_degree = min(degrees.values()) if degrees else 0
+        
+        # Densidade do grafo
+        n = subgraph.number_of_nodes()
+        m = subgraph.number_of_edges()
+        max_edges = (n * (n - 1)) / 2 if n > 1 else 1
+        density = m / max_edges if max_edges > 0 else 0
+        
+        # Componentes conectados
+        import networkx as nx
+        components = list(nx.connected_components(subgraph))
+        num_components = len(components)
+        largest_component_size = max(len(c) for c in components) if components else 0
+        
+        # Clustering
+        avg_clustering = nx.average_clustering(subgraph) if subgraph.number_of_nodes() > 0 else 0
+        
+        # Nós isolados
+        isolated_nodes = sum(1 for node in subgraph.nodes() if subgraph.degree(node) == 0)
+        
+        # Top connected nodes
+        top_connected_nodes = []
+        if degrees:
+            sorted_nodes = sorted(degrees.items(), key=lambda x: x[1], reverse=True)[:10]
+            for node_id, degree_val in sorted_nodes:
+                node_data = subgraph.nodes[node_id]
+                top_connected_nodes.append({
+                    'id': node_id,
+                    'name': node_data.get('name', node_id),
+                    'type': node_data.get('type', 'unknown'),
+                    'degree': degree_val
+                })
+        
+        # Degree distribution (quartis)
+        degree_distribution = None
+        if degrees:
+            degree_values = sorted(degrees.values())
+            n_degrees = len(degree_values)
+            degree_distribution = {
+                'min': degree_values[0],
+                'q1': degree_values[n_degrees // 4] if n_degrees >= 4 else degree_values[0],
+                'median': degree_values[n_degrees // 2] if n_degrees >= 2 else degree_values[0],
+                'q3': degree_values[3 * n_degrees // 4] if n_degrees >= 4 else degree_values[-1],
+                'max': degree_values[-1]
+            }
+        
+        # Edge types
+        edge_types = {}
+        for u, v in subgraph.edges():
+            type_u = subgraph.nodes[u].get('type', 'unknown')
+            type_v = subgraph.nodes[v].get('type', 'unknown')
+            edge_type = '-'.join(sorted([type_u, type_v]))
+            edge_types[edge_type] = edge_types.get(edge_type, 0) + 1
         
         most_connected = None
         if degrees:
@@ -224,7 +338,16 @@ class GraphService:
             'node_types': node_types_count,
             'avg_degree': round(avg_degree, 2),
             'max_degree': max_degree,
-            'most_connected_node': most_connected
+            'min_degree': min_degree,
+            'most_connected_node': most_connected,
+            'top_connected_nodes': top_connected_nodes,
+            'degree_distribution': degree_distribution,
+            'density': round(density, 4),
+            'num_components': num_components,
+            'largest_component_size': largest_component_size,
+            'avg_clustering': round(avg_clustering, 4),
+            'isolated_nodes': isolated_nodes,
+            'edge_types': edge_types
         }
         
         return {
