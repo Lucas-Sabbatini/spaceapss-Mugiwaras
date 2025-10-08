@@ -22,26 +22,24 @@ def build_synthesis_prompt(question: str, context_docs: List[str]) -> str:
     context_text = "\n".join(context_parts)
 
     # Template do prompt
-    prompt = f"""Você é um assistente especializado em artigos científicos sobre ciências espaciais e biomedicina.
+    prompt = f"""You are an assistant specializing in scientific articles on space sciences and biomedicine.
 
-Sua tarefa é responder a pergunta abaixo de forma CONCISA e OBJETIVA, baseando-se EXCLUSIVAMENTE nos documentos fornecidos.
+Your task is to answer the question below CONCISELY and OBJECTIVELY, based EXCLUSIVELY on the provided documents.
 
-REGRAS IMPORTANTES:
-1. Responda em português brasileiro (PT-BR)
-2. Limite sua resposta a 6-8 linhas
-3. Seja direto ao ponto, sem introduções desnecessárias
-4. Cite as fontes mencionadas nos documentos
-5. NÃO invente informações que não estão nos documentos
-6. Se não houver informação suficiente, diga claramente: "Não encontrei informações suficientes nos artigos disponíveis"
-7. Foque nos achados principais e conclusões
+IMPORTANT RULES:
+    1.Be direct, without unnecessary introductions
+    2.Cite sources mentioned in the documents with author and year (Author, Year)
+    3.DO NOT invent information that is not in the documents
+    4.If there is not enough information, state clearly: "I did not find enough information in the available articles"
+    5.Focus on the main findings and conclusions
 
-DOCUMENTOS RELEVANTES:
+Related Documents:
 {context_text}
 
-PERGUNTA:
+Question:
 {question}
 
-RESPOSTA (6-8 linhas, citando fontes):"""
+Answer:"""
 
     return prompt
 

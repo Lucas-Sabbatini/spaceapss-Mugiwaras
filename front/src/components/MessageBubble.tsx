@@ -1,5 +1,7 @@
 import type { Message } from '../types';
 import { SourcesList } from './SourcesList';
+import { GraphViewer } from './GraphViewer';
+import { MarkdownContent } from './MarkdownContent';
 
 interface MessageBubbleProps {
   message: Message;
@@ -19,12 +21,24 @@ export function MessageBubble({ message, onSourceClick }: MessageBubbleProps) {
               : 'bg-white border border-gray-200 text-gray-900'
           }`}
         >
-          <p className="whitespace-pre-wrap break-words">{message.content}</p>
+          {isUser ? (
+            <p className="whitespace-pre-wrap break-words">{message.content}</p>
+          ) : (
+            <div className="prose prose-sm max-w-none">
+              <MarkdownContent content={message.content} />
+            </div>
+          )}
         </div>
 
         {!isUser && message.sources && message.sources.length > 0 && (
           <div className="mt-2">
             <SourcesList sources={message.sources} onSourceClick={onSourceClick} />
+          </div>
+        )}
+
+        {!isUser && message.article && message.article.metadata?.experiment_id && (
+          <div className="mt-4">
+            <GraphViewer experimentId={message.article.metadata.experiment_id} />
           </div>
         )}
 

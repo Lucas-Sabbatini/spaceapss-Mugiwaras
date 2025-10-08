@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from packages.api.app.config import get_settings
-from packages.api.app.routers import articles, chat, health
+from packages.api.app.routers import articles, chat, health, graph
 from packages.api.app.services.logger import get_logger, log_info
 
 logger = get_logger(__name__)
@@ -16,10 +16,6 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifecycle events da aplicação."""
-    # Startup
-    log_info(logger, "Iniciando aplicação SpaceAPSS Agents", env=settings.env)
-    log_info(logger, "Sistema usando Azure Cosmos DB (SQL API)")
-
     yield
 
     # Shutdown
@@ -47,6 +43,7 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(chat.router)
 app.include_router(articles.router)
+app.include_router(graph.router)
 
 
 @app.get("/")

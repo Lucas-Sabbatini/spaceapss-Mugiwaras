@@ -70,6 +70,9 @@ class AgentPipeline:
             # Campos essenciais (Nível 1) - alta densidade semântica
             if article.title:
                 context_parts.append(f"TITLE: {article.title}")
+
+            if article.authors:
+                context_parts.append(f"AUTHORS: {', '.join(article.authors)}")
             
             if article.abstract:
                 context_parts.append(f"ABSTRACT: {article.abstract}")

@@ -78,3 +78,60 @@ export interface Message {
   article?: Article;
   timestamp: Date;
 }
+
+// Graph types
+export interface GraphNode {
+  id: string;
+  label: string;
+  group: string;
+  title: string;
+  value: number;
+}
+
+export interface GraphEdge {
+  from: string;
+  to: string;
+  value: number;
+  title: string;
+}
+
+export interface GraphNodeTypes {
+  [key: string]: number;
+}
+
+export interface MostConnectedNode {
+  id: string;
+  name: string;
+  type: string;
+  degree: number;
+}
+
+export interface GraphStats {
+  total_nodes: number;
+  total_edges: number;
+  node_types: GraphNodeTypes;
+  avg_degree: number;
+  max_degree: number;
+  most_connected_node: MostConnectedNode;
+}
+
+export interface GraphData {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  stats: GraphStats;
+}
+
+// Node details types
+export interface NodeAttributes {
+  type: string;
+  name: string;
+  experiment_ids: string[];
+}
+
+export interface NodeDetails {
+  id: string;
+  attributes: NodeAttributes;
+  degree: number;
+  neighbors_count: number;
+  neighbors: string[];
+}
