@@ -54,6 +54,10 @@ CORS_ORIGINS=
 FETCH_TIMEOUT_SECS=
 ```
 
+### Variáveis de Ambiente Front-End (`.env`)
+```bash
+VITE_API_URL=http://localhost:8000
+```
 ---
 
 ## Fluxo de Desenvolvimento
@@ -62,31 +66,24 @@ FETCH_TIMEOUT_SECS=
 #### Backend
 ```bash
 cd agents
-python -m venv .venv
-source .venv/bin/activate  # No Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+docker compose up --build
 ```
 
 #### Processamento Inicial dos Artigos
 ```bash
 # Processar os 608 artigos do CSV (~30-60 min)
+# Deve ser rodado antes da fase acima
 python process_batch.py
 
 # Gerar os grafos de conhecimento
 python build_knowledge_graph.py
 ```
 
-#### Iniciar API
-```bash
-# A partir do diretório agents/
-uvicorn main:app --reload --port 8000
-```
 
 #### Frontend
 ```bash
 cd front
-npm install
-npm run dev
+docker compose up --build
 ```
 
 ### Adicionar Novos Artigos

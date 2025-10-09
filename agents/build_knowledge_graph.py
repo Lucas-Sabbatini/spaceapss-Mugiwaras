@@ -293,55 +293,6 @@ class ArticleGraphBuilder:
             f.write(f"Total edges:     {self.kg.graph.number_of_edges()}\n")
         print(f"  ✓ Statistics: {stats_path}")
         
-        # 5. Gerar visualização do grafo
-        try:
-            print(f"\n🎨 Gerando visualização...")
-            
-            # Imagem de alta resolução
-            image_path = Path(output_dir) / f"{base_name}_visualization.png"
-            self.kg.generate_graph_image(
-                output_path=str(image_path),
-                figsize=(24, 18),
-                dpi=300,
-                layout="spring",
-                iterations=100,
-                k=0.5,
-                node_base_size=100,
-                node_size_scale=30,
-                edge_width=0.3,
-                edge_alpha=0.4,
-                font_size=8,
-                show_labels=True,
-                show_legend=True,
-                title=f"Knowledge Graph - Scientific Articles"
-            )
-            print(f"  ✓ Visualization: {image_path}")
-            
-            # Imagem compacta (sem labels para melhor visualização de grafos grandes)
-            if self.kg.graph.number_of_nodes() > 100:
-                compact_path = Path(output_dir) / f"{base_name}_visualization_compact.png"
-                self.kg.generate_graph_image(
-                    output_path=str(compact_path),
-                    figsize=(20, 15),
-                    dpi=200,
-                    layout="spring",
-                    iterations=100,
-                    k=0.5,
-                    node_base_size=80,
-                    node_size_scale=20,
-                    edge_width=0.2,
-                    edge_alpha=0.3,
-                    font_size=0,
-                    show_labels=False,
-                    show_legend=True,
-                    title=f"Knowledge Graph - {self.stats['total_articles']} Articles (Compact View)"
-                )
-                print(f"  ✓ Compact Visualization: {compact_path}")
-                
-        except Exception as e:
-            print(f"  ⚠ Erro ao gerar visualização: {e}")
-            print(f"    Certifique-se de ter matplotlib instalado: pip install matplotlib")
-        
         print(f"\n✅ Grafo salvo com sucesso!\n")
         print(f"📝 Nota: No GraphML, experiment_ids foi convertido para string (separado por vírgulas)")
         print(f"   Para preservar as listas originais, use os arquivos Pickle ou JSON.\n")

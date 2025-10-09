@@ -1,0 +1,16 @@
+services:
+  frontend:
+    container_name: spaceapss-frontend
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    networks:
+      - spaceapss-network
+
+  
+networks:
+  spaceapss-network:
+    driver: bridge
