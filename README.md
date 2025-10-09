@@ -74,9 +74,6 @@ docker compose up --build
 # Processar os 608 artigos do CSV (~30-60 min)
 # Deve ser rodado antes da fase acima
 python process_batch.py
-
-# Gerar os grafos de conhecimento
-python build_knowledge_graph.py
 ```
 
 
